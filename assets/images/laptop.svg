@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 460" role="img" aria-labelledby="title desc">
+  <title id="title">لپ تاپ</title>
+  <desc id="desc">تصویر جایگزین محصول لپ تاپ.</desc>
+  <defs>
+    <linearGradient id="screen" x1="0" x2="1" y1="0" y2="1">
+      <stop stop-color="#111827"/>
+      <stop offset=".35" stop-color="#2639a2"/>
+      <stop offset=".72" stop-color="#9d174d"/>
+      <stop offset="1" stop-color="#f59e0b"/>
+    </linearGradient>
+    <linearGradient id="body" x1="0" x2="1">
+      <stop stop-color="#475569"/>
+      <stop offset="1" stop-color="#111827"/>
+    </linearGradient>
+  </defs>
+  <rect width="600" height="460" rx="26" fill="#f8fafc"/>
+  <ellipse cx="302" cy="384" rx="206" ry="28" fill="#0f172a" opacity=".12"/>
+  <path d="M143 75 h330 a24 24 0 0 1 24 24 v214 h-384 v-208 a30 30 0 0 1 30-30z" fill="#111827"/>
+  <rect x="143" y="105" width="324" height="184" rx="13" fill="url(#screen)"/>
+  <path d="M166 251 C224 118 298 334 444 145" fill="none" stroke="#67e8f9" stroke-width="10" opacity=".55"/>
+  <path d="M83 324 h454 l-58 58 h-335z" fill="url(#body)"/>
+  <path d="M171 340 h278 l-22 24 h-230z" fill="#0f172a" opacity=".78"/>
+  <circle cx="302" cy="306" r="7" fill="#334155"/>
+</svg>

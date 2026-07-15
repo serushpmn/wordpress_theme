@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 360" role="img" aria-labelledby="title desc">
+  <title id="title">بنر پیشنهادی</title>
+  <desc id="desc">تصویر جایگزین برای پیشنهاد ویژه فروشگاه.</desc>
+  <defs>
+    <linearGradient id="g" x1="0" x2="1" y1="0" y2="1">
+      <stop stop-color="#e11d48"/>
+      <stop offset=".55" stop-color="#7c3aed"/>
+      <stop offset="1" stop-color="#0ea5e9"/>
+    </linearGradient>
+    <linearGradient id="s" x1="0" x2="1">
+      <stop stop-color="#f8fafc"/>
+      <stop offset="1" stop-color="#cbd5e1"/>
+    </linearGradient>
+  </defs>
+  <rect width="820" height="360" rx="34" fill="url(#g)"/>
+  <circle cx="100" cy="86" r="78" fill="#fff" opacity=".14"/>
+  <circle cx="728" cy="274" r="110" fill="#fff" opacity=".12"/>
+  <g transform="translate(92 78)">
+    <rect x="0" y="0" width="250" height="164" rx="18" fill="#111827"/>
+    <rect x="18" y="18" width="214" height="120" rx="12" fill="#0ea5e9"/>
+    <path d="M34 112 C78 36 130 130 210 46" fill="none" stroke="#fff" stroke-width="7" opacity=".62"/>
+    <rect x="84" y="164" width="82" height="20" rx="8" fill="#0f172a"/>
+    <rect x="55" y="184" width="140" height="14" rx="7" fill="#334155"/>
+  </g>
+  <g transform="translate(430 58)">
+    <path d="M34 0 h244 a24 24 0 0 1 24 24 v154 h-292 v-164 a14 14 0 0 1 14-14z" fill="#111827"/>
+    <rect x="52" y="23" width="206" height="122" rx="12" fill="url(#s)"/>
+    <path d="M0 185 h342 l-45 42 h-252z" fill="#475569"/>
+    <path d="M78 196 h188 l-14 16 h-160z" fill="#111827" opacity=".75"/>
+  </g>
+  <g fill="#fff" opacity=".94">
+    <rect x="94" y="278" width="170" height="24" rx="12"/>
+    <rect x="94" y="314" width="252" height="14" rx="7" opacity=".66"/>
+    <rect x="548" y="264" width="160" height="52" rx="20"/>
+  </g>
+</svg>
