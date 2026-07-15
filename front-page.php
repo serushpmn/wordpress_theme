@@ -9,14 +9,9 @@ get_header();
 
 $img  = trailingslashit( ALMASLAND_URI . '/assets/images' );
 $shop = almasland_get_default_shop_url();
-if ( ! $shop || is_wp_error( $shop ) ) {
+if ( ! $shop ) {
 	$shop = home_url( '/' );
 }
-
-$hero_title       = almasland_get_option( 'hero_title', __( 'همه چیز از MSI', 'almas-land' ) );
-$hero_text        = almasland_get_option( 'hero_text', __( 'کیفیت، اصالت و پشتیبانی تخصصی الماس لند', 'almas-land' ) );
-$hero_button_text = almasland_get_option( 'hero_button_text', __( 'خرید محصولات', 'almas-land' ) );
-$products_title   = almasland_get_option( 'home_products_title', __( 'محصولات ویژه', 'almas-land' ) );
 
 $asset_url = static function ( $file ) use ( $img ) {
 	return $img . ltrim( $file, '/' );
@@ -34,6 +29,30 @@ $category_url = static function ( $candidates ) use ( $shop ) {
 
 	return $shop;
 };
+
+$hero_title       = almasland_get_option( 'hero_title', __( 'همه چیز از MSI', 'almas-land' ) );
+$hero_text        = almasland_get_option( 'hero_text', __( 'کیفیت، اصالت و پشتیبانی تخصصی الماس لند', 'almas-land' ) );
+$hero_button_text = almasland_get_option( 'hero_button_text', __( 'خرید محصولات', 'almas-land' ) );
+$products_title   = almasland_get_option( 'home_products_title', __( 'محصولات ویژه', 'almas-land' ) );
+$hero_link        = $shop;
+$hero_banner      = '';
+
+$sliders = almasland_get_enabled_sliders();
+if ( ! empty( $sliders ) ) {
+	$slide = $sliders[0];
+	$hero_banner = almasland_get_attachment_url( $slide['image'], 'almasland-hero' );
+	if ( ! empty( $slide['link'] ) ) {
+		$hero_link = $slide['link'];
+	}
+}
+
+if ( ! $hero_banner ) {
+	$hero_banner = almasland_get_option( 'hero_image', '' );
+}
+
+if ( ! $hero_banner ) {
+	$hero_banner = $asset_url( 'promo.svg' );
+}
 
 $render_products = static function ( $args ) {
 	if ( ! class_exists( 'WooCommerce' ) || ! function_exists( 'almasland_render_home_product_loop' ) ) {
@@ -187,8 +206,8 @@ $shelves = array(
 <div class="home-hard">
 	<section class="hero-section home-hard-hero">
 		<div class="container">
-			<a class="hero-banner home-hard-hero__banner" href="<?php echo esc_url( $shop ); ?>">
-				<img src="<?php echo esc_url( $asset_url( 'Main-Banner.webp' ) ); ?>" alt="<?php echo esc_attr( $hero_title ); ?>" width="1500" height="430" decoding="async" fetchpriority="high">
+			<a class="hero-banner home-hard-hero__banner" href="<?php echo esc_url( $hero_link ); ?>">
+				<img src="<?php echo esc_url( $hero_banner ); ?>" alt="<?php echo esc_attr( $hero_title ); ?>" width="1500" height="430" decoding="async" fetchpriority="high">
 				<div class="home-hard-hero__overlay">
 					<h1><?php echo esc_html( $hero_title ); ?></h1>
 					<p><?php echo wp_kses_post( $hero_text ); ?></p>
@@ -219,30 +238,29 @@ $shelves = array(
 		</section>
 	<?php endif; ?>
 
-	<section class="container home-category-row swiper" aria-label="<?php esc_attr_e( 'دسته‌بندی‌های ویژه', 'almas-land' ); ?>" data-home-swiper="categories" dir="rtl">
+	<section class="container home-category-row" aria-label="<?php esc_attr_e( 'دسته‌بندی‌های ویژه', 'almas-land' ); ?>">
 		<div class="section-heading">
 			<h2><?php esc_html_e( 'دسته‌بندی‌های ویژه', 'almas-land' ); ?></h2>
 		</div>
-		<div class="home-category-row__list swiper-wrapper">
-			<?php foreach ( $category_cards as $category ) : ?>
-				<?php if ( ! in_array( $category['class'], array( 'category-card--laptop', 'category-card--aio', 'category-card--monitor' ), true ) ) {
-					continue;
-				} ?>
-				<a class="swiper-slide category-card category-card--hard <?php echo esc_attr( $category['class'] ); ?> home-category-card" href="<?php echo esc_url( $category_url( $category['candidates'] ) ); ?>">
-					<img src="<?php echo esc_url( $asset_url( $category['image'] ) ); ?>" alt="<?php echo esc_attr( $category['title'] ); ?>" width="320" height="420" loading="lazy" decoding="async">
-					<span><?php echo esc_html( $category['title'] ); ?></span>
-				</a>
-			<?php endforeach; ?>
+		<div class="home-category-row__swiper swiper" data-home-swiper="categories" dir="rtl">
+			<div class="home-category-row__list swiper-wrapper">
+				<?php foreach ( $category_cards as $category ) : ?>
+					<a class="swiper-slide category-card category-card--hard <?php echo esc_attr( $category['class'] ); ?> home-category-card" href="<?php echo esc_url( $category_url( $category['candidates'] ) ); ?>">
+						<img src="<?php echo esc_url( $asset_url( $category['image'] ) ); ?>" alt="<?php echo esc_attr( $category['title'] ); ?>" width="320" height="420" loading="lazy" decoding="async">
+						<span><?php echo esc_html( $category['title'] ); ?></span>
+					</a>
+				<?php endforeach; ?>
+			</div>
+			<div class="home-swiper-controls">
+				<button class="home-swiper-button home-swiper-button--prev" type="button" aria-label="<?php esc_attr_e( 'اسلاید قبلی', 'almas-land' ); ?>">
+					<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.7 6.3 9 12l5.7 5.7 1.4-1.4-4.3-4.3 4.3-4.3-1.4-1.4Z"/></svg>
+				</button>
+				<button class="home-swiper-button home-swiper-button--next" type="button" aria-label="<?php esc_attr_e( 'اسلاید بعدی', 'almas-land' ); ?>">
+					<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9.3 17.7 5.7-5.7-5.7-5.7-1.4 1.4 4.3 4.3-4.3 4.3 1.4 1.4Z"/></svg>
+				</button>
+			</div>
+			<div class="home-swiper-pagination"></div>
 		</div>
-		<div class="home-swiper-controls">
-			<button class="home-swiper-button home-swiper-button--prev" type="button" aria-label="<?php esc_attr_e( 'اسلاید قبلی', 'almas-land' ); ?>">
-				<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.7 6.3 9 12l5.7 5.7 1.4-1.4-4.3-4.3 4.3-4.3-1.4-1.4Z"/></svg>
-			</button>
-			<button class="home-swiper-button home-swiper-button--next" type="button" aria-label="<?php esc_attr_e( 'اسلاید بعدی', 'almas-land' ); ?>">
-				<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9.3 17.7 5.7-5.7-5.7-5.7-1.4 1.4 4.3 4.3-4.3 4.3 1.4 1.4Z"/></svg>
-			</button>
-		</div>
-		<div class="home-swiper-pagination"></div>
 	</section>
 
 	<section class="popular-strip home-hard-popular" aria-labelledby="home-popular-title">
@@ -254,7 +272,7 @@ $shelves = array(
 				<div class="popular-grid home-hard-popular__grid swiper-wrapper">
 					<?php foreach ( $popular_categories as $category ) : ?>
 						<a class="swiper-slide" href="<?php echo esc_url( $category_url( $category['candidates'] ) ); ?>">
-							<img src="<?php echo esc_url( $asset_url( $category['image'] ) ); ?>" alt="" width="80" height="80" loading="lazy" decoding="async">
+							<img src="<?php echo esc_url( $asset_url( $category['image'] ) ); ?>" alt="<?php echo esc_attr( $category['title'] ); ?>" width="80" height="80" loading="lazy" decoding="async">
 							<span><?php echo esc_html( $category['title'] ); ?></span>
 						</a>
 					<?php endforeach; ?>
@@ -315,7 +333,7 @@ $shelves = array(
 			<div class="promo-row swiper-wrapper">
 				<?php foreach ( $bestsellers as $item ) : ?>
 					<a class="home-hard-bestseller <?php echo esc_attr( $item['class'] ); ?> swiper-slide" href="<?php echo esc_url( $category_url( $item['candidates'] ) ); ?>">
-						<img src="<?php echo esc_url( $asset_url( $item['image'] ) ); ?>" alt="" width="88" height="88" loading="lazy" decoding="async">
+						<img src="<?php echo esc_url( $asset_url( $item['image'] ) ); ?>" alt="<?php echo esc_attr( $item['title'] ); ?>" width="88" height="88" loading="lazy" decoding="async">
 						<span><?php echo esc_html( $item['title'] ); ?></span>
 					</a>
 				<?php endforeach; ?>

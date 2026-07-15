@@ -247,16 +247,30 @@ button {
   --color-surface: #101827;
   --color-surface-soft: #172133;
   --color-surface-blue: #10243a;
+  --color-surface-alt: #151f30;
+  --color-surface-page: #151f30;
+  --color-surface-page-alt: #172133;
   --color-text: #edf4ff;
   --color-text-strong: #edf4ff;
   --color-muted: #aebbd3;
+  --color-muted-mid: #9aa8be;
+  --color-muted-soft: #8b98ad;
+  --color-muted-alt: #9aa8be;
+  --color-muted-border: #6b7890;
+  --color-muted-hint: #8b98ad;
+  --color-muted-line: #5a6780;
   --color-border: var(--color-border-dark);
+  --color-border-light: #243149;
+  --color-border-lighter: #243149;
+  --color-border-input: #2a3850;
   --color-primary: #ff5574;
   --color-primary-dark: #ff315b;
   --color-secondary: #6aa8ff;
   --color-success: #35d49a;
   --color-warning: #ffca5f;
   --color-info-pale: #cfe2ff;
+  --color-shadow-navy: rgba(0, 0, 0, 0.28);
+  --color-shadow-checkout: rgba(244, 61, 91, 0.28);
   --shadow-xs: 0 10px 30px var(--color-shadow-ambient-sm);
   --shadow-sm: 0 18px 45px var(--color-shadow-ambient-md);
   --shadow-md: 0 28px 70px var(--color-shadow-ambient-lg);
@@ -6967,6 +6981,85 @@ p.no-comments {
 .woocommerce-cart .cart-update-button:not(:disabled) {
   background: var(--color-text-strong);
   color: var(--color-white);
+}
+
+[data-theme="dark"] .woocommerce-cart .cart-summary,
+[data-theme="dark"] .woocommerce-cart .cart-item {
+  background: var(--color-surface);
+  border-color: var(--color-border);
+  box-shadow: var(--shadow-xs);
+}
+
+[data-theme="dark"] .woocommerce-cart .cart-item__quantity .quantity {
+  background: var(--color-surface-soft);
+  border-color: var(--color-border);
+}
+
+[data-theme="dark"] .woocommerce-cart .cart-item__media a,
+[data-theme="dark"] .woocommerce-cart .cart-item__media > img {
+  background: var(--color-surface-soft);
+}
+
+[data-theme="dark"] .woocommerce-cart .cart-summary__table .cart-subtotal,
+[data-theme="dark"] .woocommerce-cart .cart-summary__table .order-total {
+  border-color: var(--color-border);
+}
+
+[data-theme="dark"] .woocommerce-cart .cart-update-button {
+  background: var(--color-surface-soft);
+  color: var(--color-muted);
+}
+
+[data-theme="dark"] .woocommerce-cart .cart-update-button:not(:disabled) {
+  background: var(--color-primary);
+  color: var(--color-white);
+}
+
+[data-theme="dark"] .woocommerce-cart .cart-action-link,
+[data-theme="dark"] .woocommerce-cart .remove-button,
+[data-theme="dark"] .woocommerce-cart .cart-header__future,
+[data-theme="dark"] .woocommerce-cart .cart-header__future a {
+  color: var(--color-muted);
+}
+
+[data-theme="dark"] .woocommerce-cart .cart-item__info h2,
+[data-theme="dark"] .woocommerce-cart .cart-item__info h2 a,
+[data-theme="dark"] .woocommerce-cart .cart-item__price,
+[data-theme="dark"] .woocommerce-cart .cart-summary__table th,
+[data-theme="dark"] .woocommerce-cart .cart-summary__table td,
+[data-theme="dark"] .woocommerce-cart .cart-summary-block__title,
+[data-theme="dark"] .woocommerce-cart .cart-header__title h1 {
+  color: var(--color-text);
+}
+
+[data-theme="dark"] .woocommerce-cart .cart-item__features li,
+[data-theme="dark"] .woocommerce-cart .cart-item__features span,
+[data-theme="dark"] .woocommerce-cart .cart-item__features strong,
+[data-theme="dark"] .woocommerce-cart .cart-item__unit-price,
+[data-theme="dark"] .woocommerce-cart .woocommerce-shipping-destination,
+[data-theme="dark"] .woocommerce-cart .woocommerce-shipping-contents,
+[data-theme="dark"] .woocommerce-cart .shipping-calculator-button {
+  color: var(--color-muted);
+}
+
+[data-theme="dark"] .woocommerce-cart .remove-button:hover {
+  color: var(--color-danger-hot);
+}
+
+[data-theme="dark"] .woocommerce-cart-form input[type="text"],
+[data-theme="dark"] .woocommerce-cart-form input[type="number"] {
+  background: var(--color-surface-soft);
+  color: var(--color-text);
+  border-color: var(--color-border);
+}
+
+[data-theme="dark"] .woocommerce-cart .woocommerce-shipping-methods input[type="radio"] {
+  border-color: var(--color-border);
+  background: var(--color-surface-soft);
+}
+
+[data-theme="dark"] .cart-empty-state {
+  border-color: var(--color-border);
 }
 
 @media (max-width: 1180px) {
