@@ -88,7 +88,9 @@ if ( ! function_exists( 'almasland_setup' ) ) {
 		);
 
 		add_image_size( 'almasland-card', 640, 520, true );
-		add_image_size( 'almasland-hero', 1600, 560, true );
+		add_image_size( 'almasland-hero', 1100, 500, true );
+		add_image_size( 'almasland-hero-tablet', 900, 410, true );
+		add_image_size( 'almasland-hero-mobile', 768, 350, true );
 		add_image_size( 'almasland-single', 466, 466, true );
 	}
 }
@@ -128,21 +130,15 @@ add_action( 'widgets_init', 'almasland_widgets_init' );
  * Enqueue front-end assets.
  */
 function almasland_enqueue_assets() {
-	$is_front_page = is_front_page();
-	$style_deps    = array( 'almasland-theme' );
-	$script_deps   = array();
-
-	if ( $is_front_page ) {
-		wp_enqueue_style( 'almasland-swiper', ALMASLAND_URI . '/assets/vendor/swiper/swiper-bundle.min.css', array(), '14.0.5' );
-		wp_enqueue_script( 'almasland-swiper', ALMASLAND_URI . '/assets/vendor/swiper/swiper-bundle.min.js', array(), '14.0.5', true );
-		wp_script_add_data( 'almasland-swiper', 'strategy', 'defer' );
-
-		$style_deps[]  = 'almasland-swiper';
-		$script_deps[] = 'almasland-swiper';
-	}
+	$style_deps  = array( 'almasland-theme' );
+	$script_deps = array();
 
 	wp_enqueue_style( 'almasland-theme', get_stylesheet_uri(), array(), ALMASLAND_VERSION );
 	wp_enqueue_style( 'almasland-main', ALMASLAND_URI . '/assets/css/style.css', $style_deps, ALMASLAND_VERSION );
+
+	if ( is_front_page() ) {
+		wp_enqueue_style( 'almasland-front-page', ALMASLAND_URI . '/assets/css/front-page.css', array( 'almasland-main' ), ALMASLAND_VERSION );
+	}
 
 	wp_enqueue_script( 'almasland-main', ALMASLAND_URI . '/assets/js/main.js', $script_deps, ALMASLAND_VERSION, true );
 	wp_script_add_data( 'almasland-main', 'strategy', 'defer' );

@@ -238,11 +238,20 @@ function almasland_panel_render_homepage() {
 	}
 	echo '</ul>';
 	almasland_panel_card_close();
-	almasland_panel_card_open( __( 'متن‌های سکشن', 'almas-land' ) );
-	almasland_panel_field_text( 'almasland_panel[homepage][hero_title]', __( 'عنوان اصلی', 'almas-land' ), $hp['hero_title'] );
-	almasland_panel_field_textarea( 'almasland_panel[homepage][hero_text]', __( 'متن معرفی', 'almas-land' ), $hp['hero_text'] );
+
+	almasland_panel_card_open( __( 'Hero صفحه اصلی', 'almas-land' ) );
+	echo '<p class="description">' . esc_html__( 'ابعاد پیشنهادی: دسکتاپ ۱۱۰۰×۵۰۰، تبلت ۹۰۰×۴۱۰، موبایل ۷۶۸×۳۵۰ پیکسل.', 'almas-land' ) . '</p>';
+	almasland_panel_field_checkbox( 'almasland_panel[homepage][hero_enabled]', __( 'نمایش Hero', 'almas-land' ), ! empty( $hp['hero_enabled'] ) );
+	almasland_panel_field_image( 'almasland_panel[homepage][hero_image_desktop]', __( 'تصویر دسکتاپ', 'almas-land' ), $hp['hero_image_desktop'] ?? 0 );
+	almasland_panel_field_image( 'almasland_panel[homepage][hero_image_tablet]', __( 'تصویر تبلت', 'almas-land' ), $hp['hero_image_tablet'] ?? 0 );
+	almasland_panel_field_image( 'almasland_panel[homepage][hero_image_mobile]', __( 'تصویر موبایل', 'almas-land' ), $hp['hero_image_mobile'] ?? 0 );
+	almasland_panel_field_text( 'almasland_panel[homepage][hero_title]', __( 'عنوان Hero', 'almas-land' ), $hp['hero_title'] );
+	almasland_panel_field_textarea( 'almasland_panel[homepage][hero_text]', __( 'متن Hero', 'almas-land' ), $hp['hero_text'] );
 	almasland_panel_field_text( 'almasland_panel[homepage][hero_button_text]', __( 'متن دکمه', 'almas-land' ), $hp['hero_button_text'] );
-	almasland_panel_field_text( 'almasland_panel[homepage][hero_button_url]', __( 'لینک دکمه', 'almas-land' ), $hp['hero_button_url'], 'url' );
+	almasland_panel_field_text( 'almasland_panel[homepage][hero_button_url]', __( 'لینک Hero', 'almas-land' ), $hp['hero_button_url'], 'url' );
+	almasland_panel_card_close();
+
+	almasland_panel_card_open( __( 'متن‌های سکشن', 'almas-land' ) );
 	almasland_panel_field_text( 'almasland_panel[homepage][products_title]', __( 'عنوان محصولات', 'almas-land' ), $hp['products_title'] );
 	almasland_panel_field_text( 'almasland_panel[homepage][blog_title]', __( 'عنوان مقالات', 'almas-land' ), $hp['blog_title'] );
 	almasland_panel_card_close();

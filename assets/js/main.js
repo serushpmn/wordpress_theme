@@ -694,127 +694,91 @@ if (notifyPopup?.enabled) {
   }
 }
 
-function initHomeSwipers() {
-  if (typeof window.Swiper !== "function") {
-    return;
-  }
+function initFrontPageTrustTooltips() {
+  const bar = document.querySelector(".front-page-trust__bar");
+  if (!bar) return;
 
-  const configs = {
-    categories: {
-      slidesPerView: 1.08,
-      spaceBetween: 14,
-      breakpoints: {
-        640: { slidesPerView: 2, spaceBetween: 18 },
-        960: { slidesPerView: 3, spaceBetween: 20 },
-        1240: { slidesPerView: 4, spaceBetween: 20 },
-      },
-    },
-    popular: {
-      slidesPerView: 3,
-      spaceBetween: 12,
-      breakpoints: {
-        520: { slidesPerView: 3, spaceBetween: 14 },
-        760: { slidesPerView: 4, spaceBetween: 16 },
-        1120: { slidesPerView: 6, spaceBetween: 16 },
-      },
-    },
-    bestsellers: {
-      slidesPerView: 1.08,
-      spaceBetween: 14,
-      breakpoints: {
-        720: { slidesPerView: 2, spaceBetween: 18 },
-        1100: { slidesPerView: 3, spaceBetween: 20 },
-      },
-    },
-    products: {
-      slidesPerView: 1.08,
-      spaceBetween: 14,
-      breakpoints: {
-        520: { slidesPerView: 2, spaceBetween: 14 },
-        900: { slidesPerView: 3, spaceBetween: 18 },
-        1240: { slidesPerView: 4, spaceBetween: 18 },
-      },
-    },
+  const items = [...bar.querySelectorAll(".front-page-trust__item")];
+  const canHover = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
+
+  const closeAll = (except) => {
+    items.forEach((item) => {
+      if (item === except) return;
+      item.classList.remove("is-tooltip-open", "is-tooltip-pinned");
+      item.setAttribute("aria-expanded", "false");
+      item.querySelector(".front-page-trust__tooltip")?.setAttribute("hidden", "");
+    });
   };
 
-  document.querySelectorAll("[data-home-swiper]").forEach((container) => {
-    if (container.dataset.swiperReady === "true") {
-      if (container.swiper && !container.swiper.destroyed) {
-        container.swiper.update();
-        if (typeof container.swiper.updateAutoHeight === "function") {
-          container.swiper.updateAutoHeight();
+  const showTooltip = (item) => {
+    const tooltip = item.querySelector(".front-page-trust__tooltip");
+    if (!tooltip) return;
+    closeAll(item);
+    item.classList.add("is-tooltip-open");
+    item.setAttribute("aria-expanded", "true");
+    tooltip.removeAttribute("hidden");
+  };
+
+  const hideTooltip = (item) => {
+    if (item.classList.contains("is-tooltip-pinned")) return;
+    item.classList.remove("is-tooltip-open");
+    item.setAttribute("aria-expanded", "false");
+    item.querySelector(".front-page-trust__tooltip")?.setAttribute("hidden", "");
+  };
+
+  const toggleClickTooltip = (item) => {
+    if (item.classList.contains("is-tooltip-open")) {
+      item.classList.remove("is-tooltip-open", "is-tooltip-pinned");
+      item.setAttribute("aria-expanded", "false");
+      item.querySelector(".front-page-trust__tooltip")?.setAttribute("hidden", "");
+      return;
+    }
+    item.classList.add("is-tooltip-pinned");
+    showTooltip(item);
+  };
+
+  items.forEach((item) => {
+    const mode = item.dataset.trustTooltip || "click";
+
+    if (mode === "hover-click" && canHover) {
+      item.addEventListener("mouseenter", () => {
+        if (!item.classList.contains("is-tooltip-pinned")) {
+          showTooltip(item);
         }
-      }
+      });
+      item.addEventListener("mouseleave", () => hideTooltip(item));
+      item.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        if (item.classList.contains("is-tooltip-pinned")) {
+          item.classList.remove("is-tooltip-pinned");
+          hideTooltip(item);
+        } else {
+          item.classList.add("is-tooltip-pinned");
+          showTooltip(item);
+        }
+      });
       return;
     }
 
-    const slides = container.querySelectorAll(".swiper-slide");
-    if (!slides.length) {
-      return;
+    item.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      toggleClickTooltip(item);
+    });
+  });
+
+  document.addEventListener("click", (event) => {
+    if (!bar.contains(event.target)) {
+      closeAll();
     }
+  });
 
-    const type = container.dataset.homeSwiper || "products";
-    const pagination = container.querySelector(".home-swiper-pagination");
-    const nextEl = container.querySelector(".home-swiper-button--next");
-    const prevEl = container.querySelector(".home-swiper-button--prev");
-
-    container.dataset.swiperReady = "true";
-    const swiper = new window.Swiper(container, {
-      ...(configs[type] || configs.products),
-      watchOverflow: true,
-      watchSlidesProgress: true,
-      centerInsufficientSlides: true,
-      allowTouchMove: slides.length > 1,
-      updateOnWindowResize: true,
-      observer: true,
-      observeParents: true,
-      resizeObserver: true,
-      speed: 520,
-      slidesPerGroup: 1,
-      navigation: nextEl && prevEl ? { nextEl, prevEl } : undefined,
-      pagination: pagination
-        ? {
-            el: pagination,
-            clickable: true,
-          }
-        : undefined,
-      keyboard: {
-        enabled: true,
-        onlyInViewport: true,
-      },
-      a11y: {
-        enabled: true,
-        nextSlideMessage: "اسلاید بعدی",
-        prevSlideMessage: "اسلاید قبلی",
-        firstSlideMessage: "اولین اسلاید",
-        lastSlideMessage: "آخرین اسلاید",
-      },
-    });
-
-    const refreshSwiper = () => {
-      if (swiper && !swiper.destroyed) {
-        swiper.update();
-        if (typeof swiper.updateAutoHeight === "function") {
-          swiper.updateAutoHeight();
-        }
-      }
-    };
-
-    requestAnimationFrame(refreshSwiper);
-    window.setTimeout(refreshSwiper, 180);
-    window.setTimeout(refreshSwiper, 480);
-    window.addEventListener("load", refreshSwiper, { once: true });
-
-    container.querySelectorAll("img").forEach((image) => {
-      if (image.complete) {
-        refreshSwiper();
-        return;
-      }
-
-      image.addEventListener("load", refreshSwiper, { once: true });
-    });
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape") return;
+    closeAll();
   });
 }
 
-initHomeSwipers();
-window.addEventListener("load", initHomeSwipers);
+initFrontPageTrustTooltips();
+

@@ -370,6 +370,165 @@ function almasland_get_enabled_sliders() {
 }
 
 /**
+ * Resolve the first available attachment ID from candidates.
+ *
+ * @param int ...$ids Attachment IDs.
+ * @return int
+ */
+function almasland_resolve_attachment_id( ...$ids ) {
+	foreach ( $ids as $id ) {
+		$id = absint( $id );
+		if ( $id ) {
+			return $id;
+		}
+	}
+
+	return 0;
+}
+
+/**
+ * Front page hero data for template rendering.
+ *
+ * @return array<string, mixed>|null
+ */
+function almasland_get_home_hero() {
+	$homepage = almasland_get_panel_settings()['homepage'];
+
+	if ( empty( $homepage['hero_enabled'] ) ) {
+		return null;
+	}
+
+	$sliders    = almasland_get_enabled_sliders();
+	$slider_id  = ! empty( $sliders[0]['image'] ) ? absint( $sliders[0]['image'] ) : 0;
+	$legacy_url = almasland_get_option( 'hero_image', '' );
+	$legacy_id  = $legacy_url ? attachment_url_to_postid( $legacy_url ) : 0;
+
+	$desktop_id = almasland_resolve_attachment_id(
+		$homepage['hero_image_desktop'] ?? 0,
+		$slider_id,
+		$legacy_id
+	);
+	$tablet_id = almasland_resolve_attachment_id(
+		$homepage['hero_image_tablet'] ?? 0,
+		$desktop_id
+	);
+	$mobile_id = almasland_resolve_attachment_id(
+		$homepage['hero_image_mobile'] ?? 0,
+		$tablet_id,
+		$desktop_id
+	);
+
+	$button_url = ! empty( $homepage['hero_button_url'] ) ? $homepage['hero_button_url'] : '';
+	if ( ! $button_url && ! empty( $sliders[0]['link'] ) ) {
+		$button_url = $sliders[0]['link'];
+	}
+	if ( ! $button_url && class_exists( 'WooCommerce' ) ) {
+		$button_url = almasland_get_default_shop_url();
+	}
+
+	$title = ! empty( $homepage['hero_title'] ) ? $homepage['hero_title'] : '';
+	if ( ! $title && ! empty( $sliders[0]['title'] ) ) {
+		$title = $sliders[0]['title'];
+	}
+
+	$text = ! empty( $homepage['hero_text'] ) ? $homepage['hero_text'] : '';
+	if ( ! $text && ! empty( $sliders[0]['text'] ) ) {
+		$text = $sliders[0]['text'];
+	}
+
+	$button_text = ! empty( $homepage['hero_button_text'] ) ? $homepage['hero_button_text'] : '';
+	if ( ! $button_text && ! empty( $sliders[0]['button_text'] ) ) {
+		$button_text = $sliders[0]['button_text'];
+	}
+
+	if ( ! $title && ! $text && ! $desktop_id ) {
+		return null;
+	}
+
+	return array(
+		'title'       => $title,
+		'text'        => $text,
+		'button_text' => $button_text,
+		'link'        => $button_url,
+		'images'      => array(
+			'desktop' => $desktop_id ? almasland_get_attachment_url( $desktop_id, 'almasland-hero' ) : '',
+			'tablet'  => $tablet_id ? almasland_get_attachment_url( $tablet_id, 'almasland-hero-tablet' ) : '',
+			'mobile'  => $mobile_id ? almasland_get_attachment_url( $mobile_id, 'almasland-hero-mobile' ) : '',
+		),
+	);
+}
+
+/**
+ * SVG icon markup for front-page trust items.
+ *
+ * @param string $icon Icon key.
+ * @return string
+ */
+function almasland_get_home_trust_icon( $icon ) {
+	$icons = array(
+		'consult' => '<svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M18 30v3.5a2.5 2.5 0 0 0 4.3 1.7l2.2-2.2" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 24.5V20a10 10 0 0 1 20 0v4.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><path d="M10 24.5h4M34 24.5h4" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><path d="M12.5 24.5h23v8.5a3 3 0 0 1-3 3h-17a3 3 0 0 1-3-3v-8.5Z" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/></svg>',
+		'shipping' => '<svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M8 32h2.8a4.2 4.2 0 1 0 8.2 0H29a4.2 4.2 0 1 0 8.1 0H40V22.5L34.5 17H28v15" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M28 17V11h9.5L43 17v7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 22.5h14V32" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+		'test'     => '<svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="9" y="11" width="30" height="28" rx="4" stroke="currentColor" stroke-width="2.2"/><path d="M16 8.5V14M32 8.5V14M9 19.5h30" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><path d="M28.5 25.5H19.5L28.5 34.5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+		'guarantee' => '<svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M24 7.5 36.5 12v11.2c0 8.1-5.2 12.4-12.5 15.3C16.7 35.6 11.5 31.3 11.5 23.2V12L24 7.5Z" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/><path d="M18.5 24.2 22.2 28l7.3-7.8" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+	);
+
+	return $icons[ $icon ] ?? '';
+}
+
+/**
+ * Trust-building items for the front page.
+ *
+ * @return array<int, array<string, mixed>>
+ */
+function almasland_get_home_trust_items() {
+	$phone_display = almasland_get_option( 'phone', '۰۲۱-۸۸۸۸۶۹۵۹' );
+	$phone_tel     = almasland_get_phone_tel();
+
+	return array(
+		array(
+			'icon'          => almasland_get_home_trust_icon( 'consult' ),
+			'title'         => __( 'مشاوره تخصصی', 'almas-land' ),
+			'subtitle'      => __( 'قبل و بعد از خرید', 'almas-land' ),
+			'tooltip_mode'  => 'hover-click',
+			'tooltip_id'    => 'front-page-trust-consult',
+			'tooltip_title' => __( 'تماس با کارشناسان', 'almas-land' ),
+			'tooltip_text'  => $phone_display,
+			'tooltip_link'  => $phone_tel ? 'tel:' . $phone_tel : '',
+		),
+		array(
+			'icon'          => almasland_get_home_trust_icon( 'shipping' ),
+			'title'         => __( 'ارسال سریع', 'almas-land' ),
+			'subtitle'      => __( '۲۴ تا ۴۸ ساعت کاری', 'almas-land' ),
+			'tooltip_mode'  => 'click',
+			'tooltip_id'    => 'front-page-trust-shipping',
+			'tooltip_title' => __( 'شرایط ارسال', 'almas-land' ),
+			'tooltip_text'  => __( 'سفارش‌های تهران در همان روز یا حداکثر ۲۴ ساعت کاری ارسال می‌شوند. سایر شهرها بین ۲۴ تا ۴۸ ساعت کاری.', 'almas-land' ),
+			'tooltip_link'  => '',
+		),
+		array(
+			'icon'          => almasland_get_home_trust_icon( 'test' ),
+			'title'         => __( '۷ روز مهلت تست', 'almas-land' ),
+			'subtitle'      => __( 'بازگشت بدون قید و شرط', 'almas-land' ),
+			'tooltip_mode'  => 'click',
+			'tooltip_id'    => 'front-page-trust-test',
+			'tooltip_title' => __( 'مهلت تست محصول', 'almas-land' ),
+			'tooltip_text'  => __( 'تا ۷ روز پس از تحویل، در صورت نارضایتی می‌توانید محصول را بدون قید و شرط بازگردانید.', 'almas-land' ),
+			'tooltip_link'  => '',
+		),
+		array(
+			'icon'          => almasland_get_home_trust_icon( 'guarantee' ),
+			'title'         => __( 'ضمانت اصالت کالا', 'almas-land' ),
+			'subtitle'      => __( 'تمام محصولات تست فنی شده', 'almas-land' ),
+			'tooltip_mode'  => 'click',
+			'tooltip_id'    => 'front-page-trust-guarantee',
+			'tooltip_title' => __( 'ضمانت اصالت و سلامت', 'almas-land' ),
+			'tooltip_text'  => __( 'همه محصولات پیش از ارسال تست فنی می‌شوند و با ضمانت اصالت کالا به دست شما می‌رسند.', 'almas-land' ),
+			'tooltip_link'  => '',
+		),
+	);
+}
+
+/**
  * Enabled banners for a homepage slot.
  *
  * @param string $slot banner_1 or banner_2.

@@ -115,6 +115,12 @@ function almasland_migrate_theme_mods_to_panel( $settings ) {
 	}
 
 	$hero_image = get_theme_mod( 'almasland_hero_image', '' );
+	if ( $hero_image ) {
+		$attachment_id = attachment_url_to_postid( $hero_image ) ?: 0;
+		if ( $attachment_id && empty( $settings['homepage']['hero_image_desktop'] ) ) {
+			$settings['homepage']['hero_image_desktop'] = $attachment_id;
+		}
+	}
 	if ( $hero_image && empty( $settings['sliders'] ) ) {
 		$settings['sliders'] = array(
 			array(
@@ -216,11 +222,15 @@ function almasland_sanitize_panel_settings( $input ) {
 			}
 			$clean['homepage']['sections'][ $section_key ] = ! empty( $hp['sections'][ $section_key ] );
 		}
-		$clean['homepage']['hero_title']       = sanitize_text_field( $hp['hero_title'] ?? '' );
-		$clean['homepage']['hero_text']        = wp_kses_post( $hp['hero_text'] ?? '' );
-		$clean['homepage']['hero_button_text'] = sanitize_text_field( $hp['hero_button_text'] ?? '' );
-		$clean['homepage']['hero_button_url']  = esc_url_raw( $hp['hero_button_url'] ?? '' );
-		$clean['homepage']['products_title']   = sanitize_text_field( $hp['products_title'] ?? '' );
+		$clean['homepage']['hero_title']         = sanitize_text_field( $hp['hero_title'] ?? '' );
+		$clean['homepage']['hero_text']          = wp_kses_post( $hp['hero_text'] ?? '' );
+		$clean['homepage']['hero_button_text']   = sanitize_text_field( $hp['hero_button_text'] ?? '' );
+		$clean['homepage']['hero_button_url']    = esc_url_raw( $hp['hero_button_url'] ?? '' );
+		$clean['homepage']['hero_enabled']       = ! empty( $hp['hero_enabled'] );
+		$clean['homepage']['hero_image_desktop'] = absint( $hp['hero_image_desktop'] ?? 0 );
+		$clean['homepage']['hero_image_tablet']  = absint( $hp['hero_image_tablet'] ?? 0 );
+		$clean['homepage']['hero_image_mobile']  = absint( $hp['hero_image_mobile'] ?? 0 );
+		$clean['homepage']['products_title']     = sanitize_text_field( $hp['products_title'] ?? '' );
 		$clean['homepage']['blog_title']       = sanitize_text_field( $hp['blog_title'] ?? '' );
 	}
 
