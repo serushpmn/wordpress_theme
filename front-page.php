@@ -12,6 +12,7 @@ get_header();
 		<?php get_template_part( 'template-parts/home/section', 'hero' ); ?>
 		<?php get_template_part( 'template-parts/home/section', 'trust-bar' ); ?>
 		<?php get_template_part( 'template-parts/home/section', 'product-categories' ); ?>
+		<?php get_template_part( 'template-parts/home/section', 'special-offers' ); ?>
 	</div>
 </div>
 <?php

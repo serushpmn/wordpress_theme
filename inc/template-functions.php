@@ -688,6 +688,167 @@ function almasland_get_home_product_categories( $limit = 6 ) {
 }
 
 /**
+ * Best discount percent for homepage sale cards (supports variable products).
+ *
+ * @param WC_Product $product Product.
+ * @return int
+ */
+function almasland_get_home_sale_discount_percent( $product ) {
+	if ( ! $product || ! $product->is_on_sale() ) {
+		return 0;
+	}
+
+	$percent = almasland_get_discount_percent( $product );
+
+	if ( $percent > 0 ) {
+		return $percent;
+	}
+
+	if ( ! $product->is_type( 'variable' ) ) {
+		return 0;
+	}
+
+	$max_percent = 0;
+
+	foreach ( $product->get_children() as $child_id ) {
+		$variation = wc_get_product( $child_id );
+
+		if ( ! $variation ) {
+			continue;
+		}
+
+		$max_percent = max( $max_percent, almasland_get_discount_percent( $variation ) );
+	}
+
+	return $max_percent;
+}
+
+/**
+ * Regular and sale prices for homepage offer cards.
+ *
+ * @param WC_Product $product Product.
+ * @return array{regular: float, sale: float}
+ */
+function almasland_get_home_sale_prices( $product ) {
+	if ( ! $product || ! $product->is_on_sale() ) {
+		return array(
+			'regular' => 0.0,
+			'sale'    => 0.0,
+		);
+	}
+
+	if ( $product->is_type( 'variable' ) ) {
+		return array(
+			'regular' => (float) $product->get_variation_regular_price( 'min', false ),
+			'sale'    => (float) $product->get_variation_sale_price( 'min', false ),
+		);
+	}
+
+	return array(
+		'regular' => (float) $product->get_regular_price(),
+		'sale'    => (float) $product->get_sale_price(),
+	);
+}
+
+/**
+ * Format a WooCommerce product for the front page special offers slider.
+ *
+ * @param WC_Product $product Product.
+ * @return array<string, mixed>|null
+ */
+function almasland_format_home_sale_product( $product ) {
+	if ( ! $product || ! $product->is_visible() || ! $product->is_on_sale() ) {
+		return null;
+	}
+
+	$prices   = almasland_get_home_sale_prices( $product );
+	$discount = almasland_get_home_sale_discount_percent( $product );
+
+	if ( $prices['sale'] <= 0 ) {
+		return null;
+	}
+
+	$image_id  = $product->get_image_id();
+	$image_url = $image_id ? wp_get_attachment_image_url( $image_id, 'almasland-card' ) : '';
+
+	if ( ! $image_url && function_exists( 'wc_placeholder_img_src' ) ) {
+		$image_url = wc_placeholder_img_src();
+	}
+
+	$can_add_to_cart = $product->is_purchasable() && $product->is_in_stock() && $product->is_type( 'simple' );
+
+	return array(
+		'id'              => $product->get_id(),
+		'name'            => $product->get_name(),
+		'url'             => $product->get_permalink(),
+		'image'           => $image_url,
+		'discount'        => $discount,
+		'discount_label'  => $discount > 0
+			? sprintf(
+				/* translators: %s: discount percent */
+				__( '%s٪ تخفیف', 'almas-land' ),
+				almasland_persian_digits( $discount )
+			)
+			: '',
+		'price_html'      => almasland_persian_price( wc_price( $prices['sale'] ) ),
+		'regular_html'    => $prices['regular'] > $prices['sale']
+			? almasland_persian_price( wc_price( $prices['regular'] ) )
+			: '',
+		'can_add_to_cart' => $can_add_to_cart,
+	);
+}
+
+/**
+ * On-sale products for the front page special offers section.
+ *
+ * @param int $limit Maximum products.
+ * @return array<int, array<string, mixed>>
+ */
+function almasland_get_home_sale_products( $limit = 12 ) {
+	if ( ! class_exists( 'WooCommerce' ) ) {
+		return array();
+	}
+
+	$limit    = max( 1, (int) $limit );
+	$products = wc_get_products(
+		array(
+			'limit'   => $limit,
+			'status'  => 'publish',
+			'on_sale' => true,
+			'orderby' => 'date',
+			'order'   => 'DESC',
+		)
+	);
+
+	if ( empty( $products ) ) {
+		return array();
+	}
+
+	$items = array();
+
+	foreach ( $products as $product ) {
+		$formatted = almasland_format_home_sale_product( $product );
+
+		if ( $formatted ) {
+			$items[] = $formatted;
+		}
+	}
+
+	return $items;
+}
+
+/**
+ * Shop URL filtered to on-sale products.
+ *
+ * @return string
+ */
+function almasland_get_home_sale_products_url() {
+	$shop_url = almasland_get_default_shop_url();
+
+	return add_query_arg( 'on_sale', '1', $shop_url );
+}
+
+/**
  * Enabled banners for a homepage slot.
  *
  * @param string $slot banner_1 or banner_2.

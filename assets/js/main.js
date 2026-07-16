@@ -782,3 +782,145 @@ function initFrontPageTrustTooltips() {
 
 initFrontPageTrustTooltips();
 
+async function addOfferProductToCart(button) {
+  const productId = button.dataset.productId;
+  const productUrl = button.dataset.productUrl;
+
+  if (!productId) {
+    return false;
+  }
+
+  const payload = new FormData();
+  payload.append("product_id", productId);
+  payload.append("quantity", "1");
+
+  const response = await fetch(getWcAjaxUrl("add_to_cart"), {
+    method: "POST",
+    body: payload,
+    credentials: "same-origin",
+  });
+
+  if (!response.ok) {
+    return false;
+  }
+
+  const result = await response.json();
+
+  if (result.error && result.product_url) {
+    if (productUrl) {
+      window.location.href = productUrl;
+    }
+    return false;
+  }
+
+  updateCartFragments(result.fragments);
+  return true;
+}
+
+function initFrontPageOfferCartButtons() {
+  document.querySelectorAll("[data-offer-add-to-cart]").forEach((button) => {
+    const label = button.querySelector(".front-page-offer-card__cart-label");
+
+    button.addEventListener("click", async (event) => {
+      event.preventDefault();
+
+      if (button.disabled || button.classList.contains("is-loading")) {
+        return;
+      }
+
+      const originalLabel = button.dataset.originalLabel || label?.textContent?.trim() || "افزودن به سبد خرید";
+      button.dataset.originalLabel = originalLabel;
+      button.classList.add("is-loading");
+      button.disabled = true;
+      if (label) {
+        label.textContent = "در حال افزودن...";
+      }
+
+      try {
+        const added = await addOfferProductToCart(button);
+
+        if (!added) {
+          if (label) {
+            label.textContent = originalLabel;
+          }
+          return;
+        }
+
+        if (label) {
+          label.textContent = "به سبد خرید اضافه شد";
+        }
+        openCartChoiceModal();
+
+        window.setTimeout(() => {
+          if (label) {
+            label.textContent = originalLabel;
+          }
+        }, 1800);
+      } catch {
+        if (label) {
+          label.textContent = originalLabel;
+        }
+      } finally {
+        button.classList.remove("is-loading");
+        button.disabled = false;
+      }
+    });
+  });
+}
+
+function initFrontPageOffersSwiper() {
+  const slider = document.querySelector("[data-offers-swiper]");
+  if (!slider || typeof Swiper === "undefined" || slider.swiper) {
+    return;
+  }
+
+  const slideCount = slider.querySelectorAll(".swiper-slide").length;
+  const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const maxSlidesPerView = 4;
+  const canLoop = slideCount > maxSlidesPerView * 2;
+
+  new Swiper(slider, {
+    slidesPerView: 1.15,
+    spaceBetween: 12,
+    loop: canLoop,
+    autoHeight: false,
+    roundLengths: true,
+    watchOverflow: true,
+    observer: false,
+    observeParents: false,
+    resizeObserver: false,
+    autoplay: prefersReducedMotion
+      ? false
+      : {
+          delay: 5000,
+          disableOnInteraction: false,
+          pauseOnMouseEnter: true,
+        },
+    pagination: {
+      el: slider.querySelector(".swiper-pagination"),
+      clickable: true,
+    },
+    navigation: {
+      nextEl: slider.querySelector(".swiper-button-next"),
+      prevEl: slider.querySelector(".swiper-button-prev"),
+    },
+    breakpoints: {
+      560: {
+        slidesPerView: 2,
+        spaceBetween: 14,
+      },
+      820: {
+        slidesPerView: 3,
+        spaceBetween: 16,
+      },
+      1080: {
+        slidesPerView: 4,
+        spaceBetween: 18,
+      },
+    },
+  });
+}
+
+initFrontPageOfferCartButtons();
+initFrontPageOffersSwiper();
+
