@@ -138,13 +138,10 @@ function almasland_enqueue_assets() {
 
 	if ( is_front_page() ) {
 		wp_enqueue_style( 'almasland-front-page', ALMASLAND_URI . '/assets/css/front-page.css', array( 'almasland-main' ), ALMASLAND_VERSION );
-
-		if ( class_exists( 'WooCommerce' ) ) {
-			wp_enqueue_style( 'almasland-swiper', ALMASLAND_URI . '/assets/vendor/swiper/swiper-bundle.min.css', array(), '14.0.5' );
-			wp_enqueue_script( 'almasland-swiper', ALMASLAND_URI . '/assets/vendor/swiper/swiper-bundle.min.js', array(), '14.0.5', true );
-			wp_script_add_data( 'almasland-swiper', 'strategy', 'defer' );
-			$script_deps[] = 'almasland-swiper';
-		}
+		wp_enqueue_style( 'almasland-swiper', ALMASLAND_URI . '/assets/vendor/swiper/swiper-bundle.min.css', array(), '11.0.0' );
+		wp_enqueue_script( 'almasland-swiper', ALMASLAND_URI . '/assets/vendor/swiper/swiper-bundle.min.js', array(), '11.0.0', true );
+		wp_script_add_data( 'almasland-swiper', 'strategy', 'defer' );
+		$script_deps[] = 'almasland-swiper';
 	}
 
 	wp_enqueue_script( 'almasland-main', ALMASLAND_URI . '/assets/js/main.js', $script_deps, ALMASLAND_VERSION, true );

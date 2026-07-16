@@ -78,6 +78,47 @@ if (menuToggle && siteMenu) {
   });
 }
 
+function initHeaderCategoriesMenu() {
+  const wrap = document.querySelector(".header-categories");
+  const toggle = wrap?.querySelector("[data-categories-toggle]");
+  const panel = wrap?.querySelector("#header-categories-panel");
+
+  if (!wrap || !toggle || !panel) return;
+
+  const close = () => {
+    toggle.setAttribute("aria-expanded", "false");
+    panel.setAttribute("hidden", "");
+  };
+
+  const open = () => {
+    toggle.setAttribute("aria-expanded", "true");
+    panel.removeAttribute("hidden");
+  };
+
+  toggle.addEventListener("click", (event) => {
+    event.stopPropagation();
+    if (toggle.getAttribute("aria-expanded") === "true") {
+      close();
+    } else {
+      open();
+    }
+  });
+
+  document.addEventListener("click", (event) => {
+    if (!wrap.contains(event.target)) {
+      close();
+    }
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      close();
+    }
+  });
+}
+
+initHeaderCategoriesMenu();
+
 document.querySelectorAll(".main-nav .menu-item-has-children > a").forEach((link) => {
   link.addEventListener("click", (event) => {
     if (!window.matchMedia("(max-width: 960px)").matches) return;
@@ -695,10 +736,18 @@ if (notifyPopup?.enabled) {
 }
 
 function initFrontPageTrustTooltips() {
-  const bar = document.querySelector(".front-page-trust__bar");
-  if (!bar) return;
+  const containers = [
+    ...document.querySelectorAll(".front-page-trust__bar, .front-page-why__stats"),
+  ];
 
-  const items = [...bar.querySelectorAll(".front-page-trust__item")];
+  if (!containers.length) return;
+
+  const items = containers.flatMap((container) => [
+    ...container.querySelectorAll("[data-trust-tooltip]"),
+  ]);
+
+  if (!items.length) return;
+
   const canHover = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
 
   const closeAll = (except) => {
@@ -769,7 +818,7 @@ function initFrontPageTrustTooltips() {
   });
 
   document.addEventListener("click", (event) => {
-    if (!bar.contains(event.target)) {
+    if (!event.target.closest("[data-trust-tooltip]")) {
       closeAll();
     }
   });
@@ -780,16 +829,7 @@ function initFrontPageTrustTooltips() {
   });
 }
 
-initFrontPageTrustTooltips();
-
-async function addOfferProductToCart(button) {
-  const productId = button.dataset.productId;
-  const productUrl = button.dataset.productUrl;
-
-  if (!productId) {
-    return false;
-  }
-
+async function addProductIdToCartAjax(productId) {
   const payload = new FormData();
   payload.append("product_id", productId);
   payload.append("quantity", "1");
@@ -807,9 +847,6 @@ async function addOfferProductToCart(button) {
   const result = await response.json();
 
   if (result.error && result.product_url) {
-    if (productUrl) {
-      window.location.href = productUrl;
-    }
     return false;
   }
 
@@ -817,95 +854,78 @@ async function addOfferProductToCart(button) {
   return true;
 }
 
+async function handleOfferAddToCart(event, button) {
+  event.preventDefault();
+  event.stopPropagation();
+
+  const productId = button.getAttribute("data-offer-add-to-cart");
+  if (!productId || button.disabled || button.classList.contains("is-loading")) {
+    return;
+  }
+
+  const originalLabel = button.dataset.originalLabel || button.textContent.trim();
+  button.dataset.originalLabel = originalLabel;
+  button.classList.add("is-loading");
+  button.disabled = true;
+  button.textContent = "در حال افزودن...";
+
+  try {
+    const added = await addProductIdToCartAjax(productId);
+
+    if (!added) {
+      button.textContent = originalLabel;
+      return;
+    }
+
+    button.textContent = "به سبد خرید اضافه شد";
+    openCartChoiceModal();
+
+    window.setTimeout(() => {
+      button.textContent = originalLabel;
+    }, 1800);
+  } catch {
+    button.textContent = originalLabel;
+  } finally {
+    button.classList.remove("is-loading");
+    button.disabled = false;
+  }
+}
+
 function initFrontPageOfferCartButtons() {
   document.querySelectorAll("[data-offer-add-to-cart]").forEach((button) => {
-    const label = button.querySelector(".front-page-offer-card__cart-label");
-
-    button.addEventListener("click", async (event) => {
-      event.preventDefault();
-
-      if (button.disabled || button.classList.contains("is-loading")) {
-        return;
-      }
-
-      const originalLabel = button.dataset.originalLabel || label?.textContent?.trim() || "افزودن به سبد خرید";
-      button.dataset.originalLabel = originalLabel;
-      button.classList.add("is-loading");
-      button.disabled = true;
-      if (label) {
-        label.textContent = "در حال افزودن...";
-      }
-
-      try {
-        const added = await addOfferProductToCart(button);
-
-        if (!added) {
-          if (label) {
-            label.textContent = originalLabel;
-          }
-          return;
-        }
-
-        if (label) {
-          label.textContent = "به سبد خرید اضافه شد";
-        }
-        openCartChoiceModal();
-
-        window.setTimeout(() => {
-          if (label) {
-            label.textContent = originalLabel;
-          }
-        }, 1800);
-      } catch {
-        if (label) {
-          label.textContent = originalLabel;
-        }
-      } finally {
-        button.classList.remove("is-loading");
-        button.disabled = false;
-      }
+    button.addEventListener("click", (event) => {
+      handleOfferAddToCart(event, button);
     });
   });
 }
 
-function initFrontPageOffersSwiper() {
-  const slider = document.querySelector("[data-offers-swiper]");
+function initFrontPageSpecialOffersSwiper() {
+  const slider = document.querySelector(".front-page-offers__slider");
   if (!slider || typeof Swiper === "undefined" || slider.swiper) {
     return;
   }
 
-  const slideCount = slider.querySelectorAll(".swiper-slide").length;
-  const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const maxSlidesPerView = 4;
-  const canLoop = slideCount > maxSlidesPerView * 2;
-
-  new Swiper(slider, {
-    slidesPerView: 1.15,
-    spaceBetween: 12,
-    loop: canLoop,
+  // eslint-disable-next-line no-new
+  const swiper = new Swiper(slider, {
+    rtl: true,
     autoHeight: false,
-    roundLengths: true,
-    watchOverflow: true,
     observer: false,
     observeParents: false,
     resizeObserver: false,
-    autoplay: prefersReducedMotion
-      ? false
-      : {
-          delay: 5000,
-          disableOnInteraction: false,
-          pauseOnMouseEnter: true,
-        },
+    updateOnWindowResize: true,
+    slidesPerView: 1.12,
+    spaceBetween: 12,
+    watchOverflow: true,
+    navigation: {
+      nextEl: slider.querySelector(".front-page-offers__nav--next"),
+      prevEl: slider.querySelector(".front-page-offers__nav--prev"),
+    },
     pagination: {
-      el: slider.querySelector(".swiper-pagination"),
+      el: slider.querySelector(".front-page-offers__pagination"),
       clickable: true,
     },
-    navigation: {
-      nextEl: slider.querySelector(".swiper-button-next"),
-      prevEl: slider.querySelector(".swiper-button-prev"),
-    },
     breakpoints: {
-      560: {
+      520: {
         slidesPerView: 2,
         spaceBetween: 14,
       },
@@ -919,8 +939,89 @@ function initFrontPageOffersSwiper() {
       },
     },
   });
+
+  let resizeTimer = 0;
+  window.addEventListener("resize", () => {
+    window.clearTimeout(resizeTimer);
+    resizeTimer = window.setTimeout(() => {
+      swiper.update();
+    }, 120);
+  });
 }
 
+function initFrontPageCatalogFilters() {
+  const section = document.querySelector(".front-page-catalog");
+  if (!section) return;
+
+  const tabs = [...section.querySelectorAll("[data-catalog-tab]")];
+  const panels = [...section.querySelectorAll("[data-catalog-panel]")];
+  const viewAll = section.querySelector("[data-catalog-view-all]");
+
+  if (!tabs.length || !panels.length) return;
+
+  const activate = (key) => {
+    const activeTab = tabs.find((tab) => tab.dataset.catalogTab === key);
+
+    tabs.forEach((tab) => {
+      const isActive = tab.dataset.catalogTab === key;
+      tab.classList.toggle("is-active", isActive);
+      tab.setAttribute("aria-selected", String(isActive));
+      tab.tabIndex = isActive ? 0 : -1;
+    });
+
+    panels.forEach((panel) => {
+      const isActive = panel.dataset.catalogPanel === key;
+      panel.classList.toggle("is-active", isActive);
+      if (isActive) {
+        panel.removeAttribute("hidden");
+      } else {
+        panel.setAttribute("hidden", "");
+      }
+    });
+
+    if (viewAll && activeTab?.dataset.catalogUrl) {
+      viewAll.setAttribute("href", activeTab.dataset.catalogUrl);
+    }
+
+    if (activeTab && typeof activeTab.scrollIntoView === "function") {
+      activeTab.scrollIntoView({ behavior: "smooth", inline: "nearest", block: "nearest" });
+    }
+  };
+
+  tabs.forEach((tab, index) => {
+    if (index > 0) {
+      tab.tabIndex = -1;
+    }
+
+    tab.addEventListener("click", () => {
+      activate(tab.dataset.catalogTab);
+    });
+
+    tab.addEventListener("keydown", (event) => {
+      const currentIndex = tabs.indexOf(tab);
+      let nextIndex = currentIndex;
+
+      if (event.key === "ArrowLeft") {
+        nextIndex = (currentIndex + 1) % tabs.length;
+      } else if (event.key === "ArrowRight") {
+        nextIndex = (currentIndex - 1 + tabs.length) % tabs.length;
+      } else if (event.key === "Home") {
+        nextIndex = 0;
+      } else if (event.key === "End") {
+        nextIndex = tabs.length - 1;
+      } else {
+        return;
+      }
+
+      event.preventDefault();
+      tabs[nextIndex]?.focus();
+      activate(tabs[nextIndex].dataset.catalogTab);
+    });
+  });
+}
+
+initFrontPageTrustTooltips();
 initFrontPageOfferCartButtons();
-initFrontPageOffersSwiper();
+initFrontPageSpecialOffersSwiper();
+initFrontPageCatalogFilters();
 

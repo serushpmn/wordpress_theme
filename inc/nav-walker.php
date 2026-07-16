@@ -13,14 +13,25 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Fallback markup when no primary menu is assigned.
  */
 function almasland_primary_menu_fallback() {
-	echo '<ul class="container main-nav__inner">';
-	echo '<li class="menu-item"><a href="' . esc_url( home_url( '/' ) ) . '">' . esc_html__( 'خانه', 'almas-land' ) . '</a></li>';
+	$shop_url = class_exists( 'WooCommerce' ) ? wc_get_page_permalink( 'shop' ) : home_url( '/' );
+	$items    = array(
+		array( home_url( '/' ), __( 'صفحه اصلی', 'almas-land' ) ),
+		array( $shop_url, __( 'محصولات', 'almas-land' ) ),
+		array( add_query_arg( 'on_sale', '1', $shop_url ), __( 'پیشنهاد ویژه', 'almas-land' ) ),
+		array( home_url( '/brands/' ), __( 'برندها', 'almas-land' ) ),
+		array( get_post_type_archive_link( 'post' ) ?: home_url( '/blog/' ), __( 'مقالات', 'almas-land' ) ),
+		array( home_url( '/about/' ), __( 'درباره ما', 'almas-land' ) ),
+		array( almasland_get_contact_url(), __( 'تماس با ما', 'almas-land' ) ),
+	);
 
-	if ( class_exists( 'WooCommerce' ) ) {
-		echo '<li class="menu-item"><a href="' . esc_url( wc_get_page_permalink( 'shop' ) ) . '">' . esc_html__( 'فروشگاه', 'almas-land' ) . '</a></li>';
+	echo '<ul class="main-nav__inner">';
+	foreach ( $items as $item ) {
+		printf(
+			'<li class="menu-item nav-item"><a class="nav-link" href="%1$s">%2$s</a></li>',
+			esc_url( $item[0] ),
+			esc_html( $item[1] )
+		);
 	}
-
-	echo '<li class="menu-item"><a href="' . esc_url( almasland_get_contact_url() ) . '">' . esc_html__( 'تماس با ما', 'almas-land' ) . '</a></li>';
 	echo '</ul>';
 }
 

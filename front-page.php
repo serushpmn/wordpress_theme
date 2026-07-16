@@ -13,6 +13,9 @@ get_header();
 		<?php get_template_part( 'template-parts/home/section', 'trust-bar' ); ?>
 		<?php get_template_part( 'template-parts/home/section', 'product-categories' ); ?>
 		<?php get_template_part( 'template-parts/home/section', 'special-offers' ); ?>
+		<?php get_template_part( 'template-parts/home/section', 'why-us' ); ?>
+		<?php get_template_part( 'template-parts/home/section', 'catalog' ); ?>
+		<?php get_template_part( 'template-parts/home/section', 'features' ); ?>
 	</div>
 </div>
 <?php

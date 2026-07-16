@@ -81,25 +81,36 @@ function almasland_get_logo_id() {
  */
 function almasland_site_logo() {
 	$logo_id = almasland_get_logo_id();
+	$tagline = get_bloginfo( 'description' );
+	if ( ! $tagline ) {
+		$tagline = __( 'تجهیزات دیجیتال با ضمانت', 'almas-land' );
+	}
 
 	if ( ! $logo_id && has_custom_logo() ) {
+		echo '<div class="logo logo--image">';
 		the_custom_logo();
+		echo '<span class="logo__tagline">' . esc_html( $tagline ) . '</span>';
+		echo '</div>';
 		return;
 	}
 
 	if ( $logo_id ) {
 		$alt = get_bloginfo( 'name' );
 		printf(
-			'<a class="logo custom-logo-link" href="%1$s" rel="home">%2$s</a>',
+			'<a class="logo logo--image custom-logo-link" href="%1$s" rel="home">%2$s<span class="logo__tagline">%3$s</span></a>',
 			esc_url( home_url( '/' ) ),
-			wp_get_attachment_image( $logo_id, 'full', false, array( 'class' => 'custom-logo', 'alt' => $alt ) )
+			wp_get_attachment_image( $logo_id, 'medium', false, array( 'class' => 'custom-logo', 'alt' => $alt ) ),
+			esc_html( $tagline )
 		);
 		return;
 	}
 	?>
 	<a class="logo" href="<?php echo esc_url( home_url( '/' ) ); ?>" rel="home">
-		<span><?php echo esc_html( get_bloginfo( 'name' ) ); ?></span>
-		<i aria-hidden="true"></i>
+		<span class="logo__mark" aria-hidden="true"></span>
+		<span class="logo__copy">
+			<strong class="logo__name"><?php echo esc_html( get_bloginfo( 'name' ) ); ?></strong>
+			<span class="logo__tagline"><?php echo esc_html( $tagline ); ?></span>
+		</span>
 	</a>
 	<?php
 }
@@ -151,8 +162,11 @@ function almasland_header_cart() {
 	$count = WC()->cart ? WC()->cart->get_cart_contents_count() : 0;
 	?>
 	<a class="header-action header-action--cart" href="<?php echo esc_url( wc_get_cart_url() ); ?>" aria-label="<?php esc_attr_e( 'سبد خرید', 'almas-land' ); ?>">
-		<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 18.5A1.5 1.5 0 1 0 7 21a1.5 1.5 0 0 0 0-2.5Zm10 0A1.5 1.5 0 1 0 17 21a1.5 1.5 0 0 0 0-2.5ZM6.2 6l.4 2h11.7l-1.1 5.2H8L6.4 4H3V2h5l.4 2H21l-2.2 11.2H7.8L7.3 13H19v2H7l-.8-4.2L5.3 6h.9Z"/></svg>
-		<span class="cart-count" data-cart-count><?php echo esc_html( almasland_persian_digits( $count ) ); ?></span>
+		<span class="header-action__icon">
+			<svg viewBox="0 0 24 24" aria-hidden="true" fill="none"><path d="M7 18.5A1.5 1.5 0 1 0 7 21a1.5 1.5 0 0 0 0-2.5Zm10 0A1.5 1.5 0 1 0 17 21a1.5 1.5 0 0 0 0-2.5ZM6.2 6l.4 2h11.7l-1.1 5.2H8L6.4 4H3V2h5l.4 2H21l-2.2 11.2H7.8L7.3 13H19v2H7l-.8-4.2L5.3 6h.9Z" fill="currentColor"/></svg>
+			<span class="cart-count" data-cart-count><?php echo esc_html( almasland_persian_digits( $count ) ); ?></span>
+		</span>
+		<span><?php esc_html_e( 'سبد خرید', 'almas-land' ); ?></span>
 	</a>
 	<?php
 }
@@ -529,6 +543,124 @@ function almasland_get_home_trust_items() {
 }
 
 /**
+ * SVG icons for the front-page features bar.
+ *
+ * @param string $icon Icon key.
+ * @return string
+ */
+function almasland_get_home_features_icon( $icon ) {
+	$icons = array(
+		'packaging' => '<svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M24 8.5 38 15.5v17L24 39.5 10 32.5v-17L24 8.5Z" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/><path d="M24 22.5 38 15.5M24 22.5 10 15.5M24 22.5V39.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+		'support'   => '<svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M18 30v3.5a2.5 2.5 0 0 0 4.3 1.7l2.2-2.2" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 24.5V20a10 10 0 0 1 20 0v4.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><path d="M10 24.5h4M34 24.5h4" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><path d="M12.5 24.5h23v8.5a3 3 0 0 1-3 3h-17a3 3 0 0 1-3-3v-8.5Z" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/></svg>',
+		'price'     => '<svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M24 9.5 28.2 14l5.8.6-4.3 4.1 1.2 5.7L24 21.8l-6.9 2.6 1.2-5.7-4.3-4.1 5.8-.6L24 9.5Z" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/><path d="M16.5 27.5h15M18.5 32.5h11M20.5 37.5h7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>',
+		'payment'   => '<svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M24 7.5 36.5 12v11.2c0 8.1-5.2 12.4-12.5 15.3C16.7 35.6 11.5 31.3 11.5 23.2V12L24 7.5Z" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/><path d="M18.5 24.2 22.2 28l7.3-7.8" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+	);
+
+	return $icons[ $icon ] ?? '';
+}
+
+/**
+ * Front-page service feature items.
+ *
+ * @return array<int, array<string, string>>
+ */
+function almasland_get_home_features_items() {
+	return array(
+		array(
+			'icon'     => almasland_get_home_features_icon( 'packaging' ),
+			'title'    => __( 'بسته‌بندی مطمئن', 'almas-land' ),
+			'subtitle' => __( 'ارسال ایمن محصولات', 'almas-land' ),
+		),
+		array(
+			'icon'     => almasland_get_home_features_icon( 'support' ),
+			'title'    => __( 'پشتیبانی ۲۴/۷', 'almas-land' ),
+			'subtitle' => __( 'همیشه در کنار شما', 'almas-land' ),
+		),
+		array(
+			'icon'     => almasland_get_home_features_icon( 'price' ),
+			'title'    => __( 'تضمین بهترین قیمت', 'almas-land' ),
+			'subtitle' => __( 'قیمت رقابتی بازار', 'almas-land' ),
+		),
+		array(
+			'icon'     => almasland_get_home_features_icon( 'payment' ),
+			'title'    => __( 'پرداخت امن', 'almas-land' ),
+			'subtitle' => __( 'درگاه پرداخت معتبر', 'almas-land' ),
+		),
+	);
+}
+
+/**
+ * SVG icons for the "Why Almas Land" section.
+ *
+ * @param string $icon Icon key.
+ * @return string
+ */
+function almasland_get_home_why_icon( $icon ) {
+	$icons = array(
+		'customers' => '<svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="24" cy="16" r="6.5" stroke="currentColor" stroke-width="2.2"/><path d="M12.5 36.5c1.8-6.2 6.2-9.2 11.5-9.2s9.7 3 11.5 9.2" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>',
+		'years'     => '<svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M16 14h16l3.5 5.5V36a3 3 0 0 1-3 3H15.5a3 3 0 0 1-3-3V19.5L16 14Z" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/><path d="M16 14v5.5h16V14M20 26.5h8M20 31.5h8" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>',
+		'test'      => '<svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M28.5 12.5A11 11 0 1 1 17 14.8" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><path d="M28.5 12.5 32 8.8M28.5 12.5l3.8 3.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M19.5 35.5A11 11 0 1 1 31 33.2" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><path d="M19.5 35.5 16 39.2M19.5 35.5l-3.8-3.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+		'guarantee' => '<svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M24 7.5 36.5 12v11.2c0 8.1-5.2 12.4-12.5 15.3C16.7 35.6 11.5 31.3 11.5 23.2V12L24 7.5Z" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/><path d="M18.5 24.2 22.2 28l7.3-7.8" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+	);
+
+	return $icons[ $icon ] ?? '';
+}
+
+/**
+ * "Why Almas Land" section data for the front page.
+ *
+ * @return array<string, mixed>
+ */
+function almasland_get_home_why_section() {
+	$image_url = ALMASLAND_URI . '/assets/images/laptop.jpg';
+
+	return array(
+		'title'       => __( 'چرا الماس لند؟', 'almas-land' ),
+		'text'        => __( 'با بیش از ۵ سال تجربه در فروش لپ‌تاپ و محصولات دیجیتال، الماس لند همراه مطمئن شما در خرید هوشمندانه است. تمام محصولات با تست دقیق و ضمانت کتبی ارائه می‌شوند.', 'almas-land' ),
+		'image'       => $image_url,
+		'image_alt'   => __( 'خرید مطمئن از الماس لند', 'almas-land' ),
+		'stats'       => array(
+			array(
+				'icon'          => almasland_get_home_why_icon( 'customers' ),
+				'title'         => almasland_persian_digits( '۱۰,۰۰۰+' ),
+				'subtitle'      => __( 'مشتریان راضی', 'almas-land' ),
+				'tooltip_mode'  => 'hover-click',
+				'tooltip_id'    => 'front-page-why-customers',
+				'tooltip_title' => __( 'اعتماد مشتریان', 'almas-land' ),
+				'tooltip_text'  => __( 'بیش از ۱۰ هزار خریدار از سراسر کشور به الماس لند اعتماد کرده‌اند و تجربه خرید خود را مثبت ارزیابی کرده‌اند.', 'almas-land' ),
+			),
+			array(
+				'icon'          => almasland_get_home_why_icon( 'years' ),
+				'title'         => almasland_persian_digits( '۵ سال' ),
+				'subtitle'      => __( 'سابقه فعالیت', 'almas-land' ),
+				'tooltip_mode'  => 'click',
+				'tooltip_id'    => 'front-page-why-years',
+				'tooltip_title' => __( 'تجربه تخصصی', 'almas-land' ),
+				'tooltip_text'  => __( 'بیش از ۵ سال فعالیت تخصصی در حوزه لپ‌تاپ و تجهیزات دیجیتال، پشتوانه تجربه و شناخت دقیق بازار ماست.', 'almas-land' ),
+			),
+			array(
+				'icon'          => almasland_get_home_why_icon( 'test' ),
+				'title'         => __( 'تست ۷ روزه', 'almas-land' ),
+				'subtitle'      => __( 'تمام محصولات', 'almas-land' ),
+				'tooltip_mode'  => 'click',
+				'tooltip_id'    => 'front-page-why-test',
+				'tooltip_title' => __( 'مهلت تست محصول', 'almas-land' ),
+				'tooltip_text'  => __( 'همه محصولات تا ۷ روز پس از تحویل قابل تست هستند و در صورت نارضایتی می‌توانید بدون قید و شرط مرجوع کنید.', 'almas-land' ),
+			),
+			array(
+				'icon'          => almasland_get_home_why_icon( 'guarantee' ),
+				'title'         => __( 'ضمانت کتبی', 'almas-land' ),
+				'subtitle'      => __( 'سلامت کالا', 'almas-land' ),
+				'tooltip_mode'  => 'click',
+				'tooltip_id'    => 'front-page-why-guarantee',
+				'tooltip_title' => __( 'ضمانت سلامت کالا', 'almas-land' ),
+				'tooltip_text'  => __( 'سلامت فنی و ظاهری هر محصول با ضمانت کتبی تضمین می‌شود تا خرید شما با خیال راحت انجام شود.', 'almas-land' ),
+			),
+		),
+	);
+}
+
+/**
  * Product category image for cards (thumbnail first, then larger sizes).
  *
  * @param int $term_id Category term ID.
@@ -688,123 +820,117 @@ function almasland_get_home_product_categories( $limit = 6 ) {
 }
 
 /**
- * Best discount percent for homepage sale cards (supports variable products).
+ * Format a numeric amount for storefront cards.
+ *
+ * @param float|string $amount Raw amount.
+ * @return string
+ */
+function almasland_format_plain_price( $amount ) {
+	if ( '' === $amount || null === $amount ) {
+		return '';
+	}
+
+	if ( ! function_exists( 'wc_get_price_decimals' ) ) {
+		return almasland_persian_digits( (string) $amount );
+	}
+
+	return almasland_persian_digits(
+		number_format(
+			(float) $amount,
+			wc_get_price_decimals(),
+			wc_get_price_decimal_separator(),
+			wc_get_price_thousand_separator()
+		)
+	);
+}
+
+/**
+ * Short one-line summary for product cards.
  *
  * @param WC_Product $product Product.
- * @return int
+ * @return string
  */
-function almasland_get_home_sale_discount_percent( $product ) {
-	if ( ! $product || ! $product->is_on_sale() ) {
-		return 0;
+function almasland_get_product_card_summary( $product ) {
+	if ( ! $product ) {
+		return '';
 	}
 
-	$percent = almasland_get_discount_percent( $product );
-
-	if ( $percent > 0 ) {
-		return $percent;
+	$features = trim( (string) $product->get_meta( '_almas_features' ) );
+	if ( $features ) {
+		$lines = preg_split( '/\r\n|\r|\n/', $features );
+		return trim( (string) ( $lines[0] ?? '' ) );
 	}
 
-	if ( ! $product->is_type( 'variable' ) ) {
-		return 0;
+	$values = array_values( almasland_get_product_attribute_specs( $product, true ) );
+	$values = array_slice( array_filter( $values ), 0, 3 );
+
+	return $values ? implode( ' / ', $values ) : '';
+}
+
+/**
+ * Grade badge data for product cards.
+ *
+ * @param WC_Product $product Product.
+ * @return array{text: string, tone: string, bg?: string, color?: string}|null
+ */
+function almasland_get_product_grade_badge( $product ) {
+	if ( ! $product ) {
+		return null;
 	}
 
-	$max_percent = 0;
+	$candidates = array(
+		trim( (string) $product->get_meta( '_almas_cosmetic' ) ),
+		trim( (string) $product->get_meta( '_almas_technical' ) ),
+	);
 
-	foreach ( $product->get_children() as $child_id ) {
-		$variation = wc_get_product( $child_id );
-
-		if ( ! $variation ) {
-			continue;
+	foreach ( $candidates as $text ) {
+		if ( $text && preg_match( '/درجه/u', $text ) ) {
+			return array(
+				'text'  => $text,
+				'tone'  => almasland_get_product_grade_tone( $text ),
+			);
 		}
-
-		$max_percent = max( $max_percent, almasland_get_discount_percent( $variation ) );
 	}
 
-	return $max_percent;
+	foreach ( almasland_get_product_badges( $product ) as $badge ) {
+		if ( ! empty( $badge['text'] ) && preg_match( '/درجه/u', $badge['text'] ) ) {
+			return array(
+				'text'  => $badge['text'],
+				'tone'  => almasland_get_product_grade_tone( $badge['text'] ),
+				'bg'    => $badge['bg'],
+				'color' => $badge['color'],
+			);
+		}
+	}
+
+	return null;
 }
 
 /**
- * Regular and sale prices for homepage offer cards.
+ * Map grade label to a UI tone.
  *
- * @param WC_Product $product Product.
- * @return array{regular: float, sale: float}
+ * @param string $text Grade label.
+ * @return string
  */
-function almasland_get_home_sale_prices( $product ) {
-	if ( ! $product || ! $product->is_on_sale() ) {
-		return array(
-			'regular' => 0.0,
-			'sale'    => 0.0,
-		);
+function almasland_get_product_grade_tone( $text ) {
+	if ( preg_match( '/A|الف/u', $text ) ) {
+		return 'a';
 	}
 
-	if ( $product->is_type( 'variable' ) ) {
-		return array(
-			'regular' => (float) $product->get_variation_regular_price( 'min', false ),
-			'sale'    => (float) $product->get_variation_sale_price( 'min', false ),
-		);
+	if ( preg_match( '/B|ب/u', $text ) ) {
+		return 'b';
 	}
 
-	return array(
-		'regular' => (float) $product->get_regular_price(),
-		'sale'    => (float) $product->get_sale_price(),
-	);
+	return 'default';
 }
 
 /**
- * Format a WooCommerce product for the front page special offers slider.
- *
- * @param WC_Product $product Product.
- * @return array<string, mixed>|null
- */
-function almasland_format_home_sale_product( $product ) {
-	if ( ! $product || ! $product->is_visible() || ! $product->is_on_sale() ) {
-		return null;
-	}
-
-	$prices   = almasland_get_home_sale_prices( $product );
-	$discount = almasland_get_home_sale_discount_percent( $product );
-
-	if ( $prices['sale'] <= 0 ) {
-		return null;
-	}
-
-	$image_id  = $product->get_image_id();
-	$image_url = $image_id ? wp_get_attachment_image_url( $image_id, 'almasland-card' ) : '';
-
-	if ( ! $image_url && function_exists( 'wc_placeholder_img_src' ) ) {
-		$image_url = wc_placeholder_img_src();
-	}
-
-	$can_add_to_cart = $product->is_purchasable() && $product->is_in_stock() && $product->is_type( 'simple' );
-
-	return array(
-		'id'              => $product->get_id(),
-		'name'            => $product->get_name(),
-		'url'             => $product->get_permalink(),
-		'image'           => $image_url,
-		'discount'        => $discount,
-		'discount_label'  => $discount > 0
-			? sprintf(
-				/* translators: %s: discount percent */
-				__( '%s٪ تخفیف', 'almas-land' ),
-				almasland_persian_digits( $discount )
-			)
-			: '',
-		'price_html'      => almasland_persian_price( wc_price( $prices['sale'] ) ),
-		'regular_html'    => $prices['regular'] > $prices['sale']
-			? almasland_persian_price( wc_price( $prices['regular'] ) )
-			: '',
-		'can_add_to_cart' => $can_add_to_cart,
-	);
-}
-
-/**
- * On-sale products for the front page special offers section.
+ * On-sale products for the front page special offers slider.
  *
  * @param int $limit Maximum products.
- * @return array<int, array<string, mixed>>
+ * @return array<int, WC_Product>
  */
-function almasland_get_home_sale_products( $limit = 12 ) {
+function almasland_get_home_special_offers_products( $limit = 12 ) {
 	if ( ! class_exists( 'WooCommerce' ) ) {
 		return array();
 	}
@@ -812,11 +938,12 @@ function almasland_get_home_sale_products( $limit = 12 ) {
 	$limit    = max( 1, (int) $limit );
 	$products = wc_get_products(
 		array(
-			'limit'   => $limit,
-			'status'  => 'publish',
-			'on_sale' => true,
-			'orderby' => 'date',
-			'order'   => 'DESC',
+			'limit'    => $limit,
+			'status'   => 'publish',
+			'on_sale'  => true,
+			'orderby'  => 'date',
+			'order'    => 'DESC',
+			'return'   => 'objects',
 		)
 	);
 
@@ -824,28 +951,159 @@ function almasland_get_home_sale_products( $limit = 12 ) {
 		return array();
 	}
 
-	$items = array();
-
-	foreach ( $products as $product ) {
-		$formatted = almasland_format_home_sale_product( $product );
-
-		if ( $formatted ) {
-			$items[] = $formatted;
-		}
-	}
-
-	return $items;
+	return array_values(
+		array_filter(
+			$products,
+			static function ( $product ) {
+				return $product instanceof WC_Product && $product->is_visible() && $product->is_on_sale();
+			}
+		)
+	);
 }
 
 /**
- * Shop URL filtered to on-sale products.
+ * Categories for the front-page catalog filter tabs.
  *
+ * @param int $limit Maximum category tabs.
+ * @return array<int, WP_Term>
+ */
+function almasland_get_home_catalog_categories( $limit = 4 ) {
+	if ( ! taxonomy_exists( 'product_cat' ) ) {
+		return array();
+	}
+
+	$limit   = max( 1, (int) $limit );
+	$shop    = almasland_get_panel_settings()['shop'];
+	$cat_ids = array_filter( array_map( 'absint', (array) ( $shop['featured_category_ids'] ?? array() ) ) );
+	$terms   = array();
+
+	if ( $cat_ids ) {
+		foreach ( $cat_ids as $cat_id ) {
+			$term = get_term( $cat_id, 'product_cat' );
+			if ( $term && ! is_wp_error( $term ) ) {
+				$terms[] = $term;
+			}
+			if ( count( $terms ) >= $limit ) {
+				break;
+			}
+		}
+	}
+
+	if ( count( $terms ) < $limit ) {
+		$seen = wp_list_pluck( $terms, 'term_id' );
+		$extra = get_terms(
+			array(
+				'taxonomy'   => 'product_cat',
+				'parent'     => 0,
+				'hide_empty' => true,
+				'exclude'    => $seen,
+				'number'     => $limit - count( $terms ),
+				'orderby'    => 'menu_order',
+				'order'      => 'ASC',
+			)
+		);
+
+		if ( ! is_wp_error( $extra ) && $extra ) {
+			$terms = array_merge( $terms, $extra );
+		}
+	}
+
+	return array_slice( $terms, 0, $limit );
+}
+
+/**
+ * Products for the front-page catalog grid.
+ *
+ * @param int $category_id Product category ID (0 = all).
+ * @param int $limit       Maximum products.
+ * @return array<int, WC_Product>
+ */
+function almasland_get_home_catalog_products( $category_id = 0, $limit = 8 ) {
+	if ( ! class_exists( 'WooCommerce' ) ) {
+		return array();
+	}
+
+	$args = array(
+		'limit'   => max( 1, (int) $limit ),
+		'status'  => 'publish',
+		'orderby' => 'date',
+		'order'   => 'DESC',
+		'return'  => 'objects',
+	);
+
+	$category_id = absint( $category_id );
+	if ( $category_id ) {
+		$term = get_term( $category_id, 'product_cat' );
+		if ( ! $term || is_wp_error( $term ) ) {
+			return array();
+		}
+		$args['category'] = array( $term->slug );
+	}
+
+	$products = wc_get_products( $args );
+
+	if ( empty( $products ) ) {
+		return array();
+	}
+
+	return array_values(
+		array_filter(
+			$products,
+			static function ( $product ) {
+				return $product instanceof WC_Product && $product->is_visible();
+			}
+		)
+	);
+}
+
+/**
+ * Render one catalog product card HTML.
+ *
+ * @param WC_Product $product Product.
  * @return string
  */
-function almasland_get_home_sale_products_url() {
-	$shop_url = almasland_get_default_shop_url();
+function almasland_get_home_catalog_card_html( $product ) {
+	if ( ! $product instanceof WC_Product ) {
+		return '';
+	}
 
-	return add_query_arg( 'on_sale', '1', $shop_url );
+	$product_link = $product->get_permalink();
+	$summary      = almasland_get_product_card_summary( $product );
+	$grade        = almasland_get_product_grade_badge( $product );
+	$price        = (float) $product->get_price();
+	$grade_style  = '';
+
+	if ( $grade && ! empty( $grade['bg'] ) ) {
+		$grade_style = sprintf(
+			' style="background-color:%1$s;color:%2$s;"',
+			esc_attr( $grade['bg'] ),
+			esc_attr( $grade['color'] ?? '#ffffff' )
+		);
+	}
+
+	ob_start();
+	?>
+	<a class="front-page-catalog-card" href="<?php echo esc_url( $product_link ); ?>">
+		<span class="front-page-catalog-card__media">
+			<?php echo wp_kses_post( $product->get_image( 'almasland-card', array( 'loading' => 'lazy', 'decoding' => 'async' ) ) ); ?>
+		</span>
+		<span class="front-page-catalog-card__body">
+			<strong class="front-page-catalog-card__title"><?php echo esc_html( $product->get_name() ); ?></strong>
+			<?php if ( $summary ) : ?>
+				<span class="front-page-catalog-card__specs"><?php echo esc_html( $summary ); ?></span>
+			<?php endif; ?>
+			<?php if ( $grade ) : ?>
+				<span class="front-page-catalog-card__grade front-page-catalog-card__grade--<?php echo esc_attr( $grade['tone'] ); ?>"<?php echo $grade_style; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>>
+					<?php echo esc_html( $grade['text'] ); ?>
+				</span>
+			<?php endif; ?>
+			<?php if ( $price > 0 ) : ?>
+				<span class="front-page-catalog-card__price"><?php echo esc_html( almasland_format_plain_price( $price ) ); ?></span>
+			<?php endif; ?>
+		</span>
+	</a>
+	<?php
+	return (string) ob_get_clean();
 }
 
 /**
@@ -1090,8 +1348,8 @@ function almasland_social_links() {
 		'facebook'  => 'Facebook',
 	);
 
-	$social  = almasland_get_panel_settings()['social'];
-	$links   = array();
+	$social = almasland_get_panel_settings()['social'];
+	$links  = array();
 	foreach ( $labels as $key => $label ) {
 		if ( ! empty( $social[ $key ] ) ) {
 			$links[ $label ] = $social[ $key ];
@@ -1108,6 +1366,60 @@ function almasland_social_links() {
 		<?php endforeach; ?>
 	</div>
 	<?php
+}
+
+/**
+ * Footer social icons with SVG.
+ */
+function almasland_footer_social_links() {
+	$icons = array(
+		'instagram' => '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="5" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="17.2" cy="6.8" r="1" fill="currentColor"/></svg>',
+		'telegram'  => '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 4.5 3.8 11.2c-1.1.4-1.1 1.1-.2 1.4l4.3 1.3 1.7 5.1c.2.7.4.9 1 .9.5 0 .7-.2 1-.6l2.4-3.9 4.5 3.3c.8.5 1.4.2 1.6-.8L21.8 5.6c.3-1.2-.4-1.7-1.3-1.1Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>',
+		'whatsapp'  => '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5a8.5 8.5 0 0 0-7.3 12.8L4 20.5l4.3-.7A8.5 8.5 0 1 0 12 3.5Z" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M9.2 9.4c.2-.4.4-.4.6-.4h.5c.2 0 .4 0 .5.4l.7 1.7c.1.2 0 .4-.1.6l-.4.5c-.1.1-.1.3 0 .4.4.7 1.1 1.4 1.9 1.8.2.1.3.1.4 0l.6-.4c.2-.1.4-.1.5 0l1.6.9c.2.1.3.3.3.5v.5c0 .2 0 .4-.4.6-.4.2-1 .4-1.7.2-1.8-.4-3.4-1.6-4.5-3.2-1-1.5-1.3-3.1-1.1-4.2.1-.5.3-.8.6-1Z" fill="currentColor"/></svg>',
+		'linkedin'  => '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="3" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M8 10.5V16M8 7.8v.2M12 16v-3.2a1.8 1.8 0 0 1 3.6 0V16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>',
+		'youtube'   => '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="6" width="19" height="12" rx="3" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="m10.5 9.5 5 2.5-5 2.5v-5Z" fill="currentColor"/></svg>',
+		'aparat'    => '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="12" r="3" fill="currentColor"/></svg>',
+		'x'         => '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>',
+		'facebook'  => '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 8h2.5V4.8C16 4.6 15 4.5 14 4.5c-2.4 0-4 1.5-4 4.2V11H7.5v3.2H10V20h3.2v-5.8H16l.5-3.2h-3.3V9c0-.6.2-1 1.1-1Z" fill="currentColor"/></svg>',
+	);
+
+	$labels = array(
+		'instagram' => __( 'اینستاگرام', 'almas-land' ),
+		'telegram'  => __( 'تلگرام', 'almas-land' ),
+		'whatsapp'  => __( 'واتساپ', 'almas-land' ),
+		'linkedin'  => __( 'لینکدین', 'almas-land' ),
+		'youtube'   => __( 'یوتیوب', 'almas-land' ),
+		'aparat'    => __( 'آپارات', 'almas-land' ),
+		'x'         => 'X',
+		'facebook'  => __( 'فیسبوک', 'almas-land' ),
+	);
+
+	$social = almasland_get_panel_settings()['social'];
+	$items  = array();
+
+	foreach ( $icons as $key => $svg ) {
+		if ( empty( $social[ $key ] ) ) {
+			continue;
+		}
+		$items[] = array(
+			'url'   => $social[ $key ],
+			'label' => $labels[ $key ],
+			'icon'  => $svg,
+		);
+	}
+
+	if ( empty( $items ) ) {
+		return;
+	}
+
+	foreach ( $items as $item ) {
+		printf(
+			'<a class="footer-socials__link" href="%1$s" target="_blank" rel="noopener noreferrer" aria-label="%2$s">%3$s</a>',
+			esc_url( $item['url'] ),
+			esc_attr( $item['label'] ),
+			$item['icon'] // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		);
+	}
 }
 
 /**
