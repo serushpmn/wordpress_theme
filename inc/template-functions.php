@@ -529,6 +529,165 @@ function almasland_get_home_trust_items() {
 }
 
 /**
+ * Product category image for cards (thumbnail first, then larger sizes).
+ *
+ * @param int $term_id Category term ID.
+ * @return array{url: string, width: int, height: int, srcset: string}
+ */
+function almasland_get_product_category_image( $term_id ) {
+	$thumb_id = (int) get_term_meta( $term_id, 'thumbnail_id', true );
+
+	if ( ! $thumb_id ) {
+		$placeholder = function_exists( 'wc_placeholder_img_src' ) ? wc_placeholder_img_src() : '';
+
+		return array(
+			'url'    => $placeholder,
+			'width'  => 120,
+			'height' => 120,
+			'srcset' => '',
+		);
+	}
+
+	$sizes = array( 'woocommerce_thumbnail', 'medium', 'full' );
+
+	foreach ( $sizes as $size ) {
+		$url = wp_get_attachment_image_url( $thumb_id, $size );
+
+		if ( ! $url ) {
+			continue;
+		}
+
+		$meta = wp_get_attachment_image_src( $thumb_id, $size );
+
+		return array(
+			'url'    => $url,
+			'width'  => isset( $meta[1] ) ? (int) $meta[1] : 120,
+			'height' => isset( $meta[2] ) ? (int) $meta[2] : 120,
+			'srcset' => (string) wp_get_attachment_image_srcset( $thumb_id, $size ),
+		);
+	}
+
+	return array(
+		'url'    => '',
+		'width'  => 120,
+		'height' => 120,
+		'srcset' => '',
+	);
+}
+
+/**
+ * Product count for a WooCommerce category.
+ *
+ * @param WP_Term $term Category term.
+ * @return int
+ */
+function almasland_get_product_category_count( $term ) {
+	if ( function_exists( 'wc_get_term_product_count' ) ) {
+		return (int) wc_get_term_product_count( $term->term_id, 'product_cat', true );
+	}
+
+	return (int) $term->count;
+}
+
+/**
+ * Front page product categories for the categories grid.
+ *
+ * @param int $limit Maximum categories to return.
+ * @return array<int, array<string, mixed>>
+ */
+function almasland_get_home_product_categories( $limit = 6 ) {
+	if ( ! taxonomy_exists( 'product_cat' ) ) {
+		return array();
+	}
+
+	$limit    = max( 1, (int) $limit );
+	$shop     = almasland_get_panel_settings()['shop'];
+	$cat_ids  = array_filter( array_map( 'absint', (array) ( $shop['featured_category_ids'] ?? array() ) ) );
+	$terms    = array();
+	$seen_ids = array();
+
+	if ( $cat_ids ) {
+		foreach ( $cat_ids as $cat_id ) {
+			$term = get_term( $cat_id, 'product_cat' );
+
+			if ( ! $term || is_wp_error( $term ) ) {
+				continue;
+			}
+
+			$terms[]    = $term;
+			$seen_ids[] = $term->term_id;
+
+			if ( count( $terms ) >= $limit ) {
+				break;
+			}
+		}
+	}
+
+	if ( count( $terms ) < $limit ) {
+		$extra = get_terms(
+			array(
+				'taxonomy'   => 'product_cat',
+				'parent'     => 0,
+				'hide_empty' => true,
+				'exclude'    => $seen_ids,
+				'number'     => $limit - count( $terms ),
+				'orderby'    => 'menu_order',
+				'order'      => 'ASC',
+			)
+		);
+
+		if ( ! is_wp_error( $extra ) && ! empty( $extra ) ) {
+			$terms = array_merge( $terms, $extra );
+		}
+	}
+
+	if ( empty( $terms ) ) {
+		$terms = get_terms(
+			array(
+				'taxonomy'   => 'product_cat',
+				'parent'     => 0,
+				'hide_empty' => true,
+				'number'     => $limit,
+				'orderby'    => 'menu_order',
+				'order'      => 'ASC',
+			)
+		);
+
+		if ( is_wp_error( $terms ) ) {
+			return array();
+		}
+	}
+
+	$items = array();
+
+	foreach ( array_slice( $terms, 0, $limit ) as $term ) {
+		$link = get_term_link( $term );
+
+		if ( is_wp_error( $link ) ) {
+			continue;
+		}
+
+		$image = almasland_get_product_category_image( $term->term_id );
+		$count = almasland_get_product_category_count( $term );
+
+		$items[] = array(
+			'id'          => $term->term_id,
+			'name'        => $term->name,
+			'url'         => $link,
+			'image'       => $image,
+			'count'       => $count,
+			'count_label' => sprintf(
+				/* translators: %s: product count */
+				__( '%s محصول', 'almas-land' ),
+				almasland_persian_digits( $count )
+			),
+		);
+	}
+
+	return $items;
+}
+
+/**
  * Enabled banners for a homepage slot.
  *
  * @param string $slot banner_1 or banner_2.
