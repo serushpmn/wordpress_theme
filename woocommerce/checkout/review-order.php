@@ -2,12 +2,16 @@
 /**
  * Review order.
  *
+ * The outer wrapper MUST use class `woocommerce-checkout-review-order-table`
+ * so WooCommerce AJAX replaceWith() swaps the full block (not only the totals table).
+ *
  * @package AlmasLand
+ * @see WC_AJAX::update_order_review()
  */
 
 defined( 'ABSPATH' ) || exit;
 ?>
-<div class="checkout-review-order">
+<div class="checkout-review-order woocommerce-checkout-review-order-table">
 	<ul class="mini-order-list checkout-review-order__items" aria-label="<?php esc_attr_e( 'اقلام سفارش', 'almas-land' ); ?>">
 		<?php
 		do_action( 'woocommerce_review_order_before_cart_contents' );
@@ -36,7 +40,7 @@ defined( 'ABSPATH' ) || exit;
 		?>
 	</ul>
 
-	<table class="shop_table woocommerce-checkout-review-order-table checkout-totals-table">
+	<table class="shop_table checkout-totals-table">
 		<tbody>
 			<tr class="cart-subtotal">
 				<th><?php esc_html_e( 'جمع کالاها', 'almas-land' ); ?></th>
@@ -89,4 +93,6 @@ defined( 'ABSPATH' ) || exit;
 			<?php do_action( 'woocommerce_review_order_after_order_total' ); ?>
 		</tbody>
 	</table>
+
+	<?php get_template_part( 'template-parts/checkout/trust-badges' ); ?>
 </div>

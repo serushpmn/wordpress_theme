@@ -88,14 +88,55 @@ function almasland_checkout_fields( $fields ) {
 		'order_comments'      => __( 'نکته‌ای درباره زمان تحویل یا بسته‌بندی...', 'almas-land' ),
 	);
 
-	$wide_fields = array(
-		'billing_address_1',
-		'billing_address_2',
-		'shipping_address_1',
-		'shipping_address_2',
-		'order_comments',
-		'account_password',
-		'account_password-2',
+	// Desktop layout: address stays full-width; state/city/postcode share one row; other fields pair in two columns.
+	$layout_classes = array(
+		'billing_first_name'  => array( 'form-row-first' ),
+		'billing_last_name'   => array( 'form-row-last' ),
+		'billing_phone'       => array( 'form-row-first' ),
+		'billing_email'       => array( 'form-row-last' ),
+		'billing_company'     => array( 'form-row-first' ),
+		'billing_country'     => array( 'form-row-last' ),
+		'billing_address_1'   => array( 'form-row-wide' ),
+		'billing_address_2'   => array( 'form-row-wide' ),
+		'billing_state'       => array( 'form-row-third', 'form-row-third--first' ),
+		'billing_city'        => array( 'form-row-third' ),
+		'billing_postcode'    => array( 'form-row-third', 'form-row-third--last' ),
+		'shipping_first_name' => array( 'form-row-first' ),
+		'shipping_last_name'  => array( 'form-row-last' ),
+		'shipping_company'    => array( 'form-row-first' ),
+		'shipping_country'    => array( 'form-row-last' ),
+		'shipping_address_1'  => array( 'form-row-wide' ),
+		'shipping_address_2'  => array( 'form-row-wide' ),
+		'shipping_state'      => array( 'form-row-third', 'form-row-third--first' ),
+		'shipping_city'       => array( 'form-row-third' ),
+		'shipping_postcode'   => array( 'form-row-third', 'form-row-third--last' ),
+		'order_comments'      => array( 'form-row-wide' ),
+		'account_username'    => array( 'form-row-wide' ),
+		'account_password'    => array( 'form-row-wide' ),
+		'account_password-2'  => array( 'form-row-wide' ),
+	);
+
+	$priorities = array(
+		'billing_first_name'  => 10,
+		'billing_last_name'   => 20,
+		'billing_phone'       => 30,
+		'billing_email'       => 40,
+		'billing_company'     => 50,
+		'billing_country'     => 60,
+		'billing_address_1'   => 70,
+		'billing_address_2'   => 80,
+		'billing_state'       => 90,
+		'billing_city'        => 100,
+		'billing_postcode'    => 110,
+		'shipping_first_name' => 10,
+		'shipping_last_name'  => 20,
+		'shipping_company'    => 30,
+		'shipping_country'    => 40,
+		'shipping_address_1'  => 50,
+		'shipping_address_2'  => 60,
+		'shipping_state'      => 70,
+		'shipping_city'       => 80,
+		'shipping_postcode'   => 90,
 	);
 
 	foreach ( $fields as $group => &$group_fields ) {
@@ -108,17 +149,21 @@ function almasland_checkout_fields( $fields ) {
 				$field['placeholder'] = $placeholder_map[ $key ];
 			}
 
-			if ( in_array( $key, $wide_fields, true ) ) {
-				$field['class'] = array( 'form-row-wide' );
+			if ( isset( $layout_classes[ $key ] ) ) {
+				$field['class'] = $layout_classes[ $key ];
 			} else {
 				$field['class'] = array( 'form-row-first' );
+			}
+
+			if ( isset( $priorities[ $key ] ) ) {
+				$field['priority'] = $priorities[ $key ];
 			}
 		}
 	}
 
 	return $fields;
 }
-add_filter( 'woocommerce_checkout_fields', 'almasland_checkout_fields', 20 );
+add_filter( 'woocommerce_checkout_fields', 'almasland_checkout_fields', 99 );
 
 /**
  * Persian shipping package title on checkout.
