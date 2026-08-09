@@ -356,12 +356,121 @@ function almasland_breadcrumb( $args = array() ) {
 function almasland_post_meta() {
 	?>
 	<div class="post-meta">
-		<span><?php echo esc_html( get_the_date() ); ?></span>
-		<span><?php echo wp_kses_post( get_the_author_posts_link() ); ?></span>
+		<span class="post-meta__item post-meta__item--date"><?php echo esc_html( almasland_persian_digits( get_the_date() ) ); ?></span>
+		<span class="post-meta__item post-meta__item--author"><?php echo wp_kses_post( get_the_author_posts_link() ); ?></span>
 		<?php if ( has_category() ) : ?>
-			<span><?php echo wp_kses_post( get_the_category_list( '، ' ) ); ?></span>
+			<span class="post-meta__item post-meta__item--cats"><?php echo wp_kses_post( get_the_category_list( '، ' ) ); ?></span>
 		<?php endif; ?>
+		<span class="post-meta__item post-meta__item--read"><?php echo esc_html( almasland_get_reading_time() ); ?></span>
 	</div>
+	<?php
+}
+
+/**
+ * Estimated reading time for the current post.
+ *
+ * @param int $post_id Optional post ID.
+ * @return string
+ */
+function almasland_get_reading_time( $post_id = 0 ) {
+	$post_id = $post_id ? absint( $post_id ) : get_the_ID();
+	$content = (string) get_post_field( 'post_content', $post_id );
+	$chars   = mb_strlen( wp_strip_all_tags( $content ) );
+	$minutes = max( 1, (int) ceil( $chars / 1000 ) );
+
+	return sprintf(
+		/* translators: %s: minutes */
+		__( '%s دقیقه مطالعه', 'almas-land' ),
+		almasland_persian_digits( (string) $minutes )
+	);
+}
+
+/**
+ * Blog category chips for archive headers.
+ *
+ * @param int $limit Max categories.
+ * @return void
+ */
+function almasland_blog_category_chips( $limit = 10 ) {
+	$terms = get_categories(
+		array(
+			'hide_empty' => true,
+			'number'     => max( 1, (int) $limit ),
+			'orderby'    => 'count',
+			'order'      => 'DESC',
+		)
+	);
+
+	if ( empty( $terms ) || is_wp_error( $terms ) ) {
+		return;
+	}
+
+	$current = is_category() ? (int) get_queried_object_id() : 0;
+	$all_url = (int) get_option( 'page_for_posts' )
+		? get_permalink( (int) get_option( 'page_for_posts' ) )
+		: ( get_post_type_archive_link( 'post' ) ?: home_url( '/' ) );
+	?>
+	<nav class="blog-chips" aria-label="<?php esc_attr_e( 'دسته‌بندی مقالات', 'almas-land' ); ?>">
+		<a class="blog-chip<?php echo 0 === $current ? ' is-active' : ''; ?>" href="<?php echo esc_url( $all_url ); ?>">
+			<?php esc_html_e( 'همه', 'almas-land' ); ?>
+		</a>
+		<?php foreach ( $terms as $term ) : ?>
+			<a
+				class="blog-chip<?php echo (int) $term->term_id === $current ? ' is-active' : ''; ?>"
+				href="<?php echo esc_url( get_category_link( $term ) ); ?>"
+			>
+				<?php echo esc_html( $term->name ); ?>
+				<em><?php echo esc_html( almasland_persian_digits( (string) $term->count ) ); ?></em>
+			</a>
+		<?php endforeach; ?>
+	</nav>
+	<?php
+}
+
+/**
+ * Related blog posts by shared categories.
+ *
+ * @param int $limit Max posts.
+ * @return void
+ */
+function almasland_related_posts( $limit = 3 ) {
+	$post_id = get_the_ID();
+	$cats    = wp_get_post_categories( $post_id );
+
+	if ( ! $cats ) {
+		return;
+	}
+
+	$query = new WP_Query(
+		array(
+			'post_type'           => 'post',
+			'posts_per_page'      => max( 1, (int) $limit ),
+			'post__not_in'        => array( $post_id ),
+			'category__in'        => $cats,
+			'ignore_sticky_posts' => true,
+			'no_found_rows'       => true,
+		)
+	);
+
+	if ( ! $query->have_posts() ) {
+		return;
+	}
+	?>
+	<section class="blog-related" aria-labelledby="blog-related-title">
+		<header class="blog-related__header">
+			<h2 id="blog-related-title"><?php esc_html_e( 'مقالات مرتبط', 'almas-land' ); ?></h2>
+			<p><?php esc_html_e( 'ادامه مطالعه درباره همین موضوع', 'almas-land' ); ?></p>
+		</header>
+		<div class="blog-grid blog-grid--related">
+			<?php
+			while ( $query->have_posts() ) :
+				$query->the_post();
+				get_template_part( 'template-parts/content' );
+			endwhile;
+			wp_reset_postdata();
+			?>
+		</div>
+	</section>
 	<?php
 }
 
@@ -963,50 +1072,67 @@ function almasland_get_home_special_offers_products( $limit = 12 ) {
 
 /**
  * Categories for the front-page catalog filter tabs.
+ * Top-level WooCommerce categories ordered by product count (including children).
  *
  * @param int $limit Maximum category tabs.
  * @return array<int, WP_Term>
  */
-function almasland_get_home_catalog_categories( $limit = 4 ) {
+function almasland_get_home_catalog_categories( $limit = 10 ) {
 	if ( ! taxonomy_exists( 'product_cat' ) ) {
 		return array();
 	}
 
 	$limit   = max( 1, (int) $limit );
-	$shop    = almasland_get_panel_settings()['shop'];
-	$cat_ids = array_filter( array_map( 'absint', (array) ( $shop['featured_category_ids'] ?? array() ) ) );
-	$terms   = array();
+	$exclude = array_filter( array( (int) get_option( 'default_product_cat', 0 ) ) );
 
-	if ( $cat_ids ) {
-		foreach ( $cat_ids as $cat_id ) {
-			$term = get_term( $cat_id, 'product_cat' );
-			if ( $term && ! is_wp_error( $term ) ) {
-				$terms[] = $term;
-			}
-			if ( count( $terms ) >= $limit ) {
-				break;
-			}
-		}
+	$terms = get_terms(
+		array(
+			'taxonomy'   => 'product_cat',
+			'parent'     => 0,
+			'hide_empty' => false,
+			'exclude'    => $exclude,
+		)
+	);
+
+	if ( is_wp_error( $terms ) || empty( $terms ) ) {
+		return array();
 	}
 
-	if ( count( $terms ) < $limit ) {
-		$seen = wp_list_pluck( $terms, 'term_id' );
-		$extra = get_terms(
-			array(
-				'taxonomy'   => 'product_cat',
-				'parent'     => 0,
-				'hide_empty' => true,
-				'exclude'    => $seen,
-				'number'     => $limit - count( $terms ),
-				'orderby'    => 'menu_order',
-				'order'      => 'ASC',
-			)
-		);
+	foreach ( $terms as $term ) {
+		$total    = (int) $term->count;
+		$children = get_term_children( (int) $term->term_id, 'product_cat' );
 
-		if ( ! is_wp_error( $extra ) && $extra ) {
-			$terms = array_merge( $terms, $extra );
+		if ( ! is_wp_error( $children ) && $children ) {
+			foreach ( $children as $child_id ) {
+				$child = get_term( (int) $child_id, 'product_cat' );
+				if ( $child && ! is_wp_error( $child ) ) {
+					$total += (int) $child->count;
+				}
+			}
 		}
+
+		$term->count = $total;
 	}
+
+	$terms = array_values(
+		array_filter(
+			$terms,
+			static function ( $term ) {
+				return (int) $term->count > 0;
+			}
+		)
+	);
+
+	usort(
+		$terms,
+		static function ( $a, $b ) {
+			$count_cmp = (int) $b->count <=> (int) $a->count;
+			if ( 0 !== $count_cmp ) {
+				return $count_cmp;
+			}
+			return strcasecmp( (string) $a->name, (string) $b->name );
+		}
+	);
 
 	return array_slice( $terms, 0, $limit );
 }
@@ -1435,9 +1561,8 @@ function almasland_get_shop_pagination_add_args() {
 	$state    = almasland_get_shop_filter_state();
 	$add_args = array();
 
-	if ( 'date' !== $state['orderby'] || 'DESC' !== $state['order'] ) {
+	if ( ! empty( $state['orderby'] ) && 'date' !== $state['orderby'] ) {
 		$add_args['orderby'] = $state['orderby'];
-		$add_args['order']   = $state['order'];
 	}
 
 	if ( $state['min_price'] ) {
@@ -1460,10 +1585,6 @@ function almasland_get_shop_pagination_add_args() {
 
 	if ( ! empty( $state['filter_brand'] ) ) {
 		$add_args['filter_brand'] = $state['filter_brand'];
-	}
-
-	if ( ! empty( $state['filter_color'] ) ) {
-		$add_args['filter_color'] = $state['filter_color'];
 	}
 
 	if ( ! empty( $state['filter_cat'] ) ) {

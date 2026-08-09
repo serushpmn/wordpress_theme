@@ -144,6 +144,12 @@ function almasland_enqueue_assets() {
 		$script_deps[] = 'almasland-swiper';
 	}
 
+	if ( function_exists( 'is_product' ) && is_product() ) {
+		wp_enqueue_script( 'wc-add-to-cart-variation' );
+		$script_deps[] = 'jquery';
+		$script_deps[] = 'wc-add-to-cart-variation';
+	}
+
 	wp_enqueue_script( 'almasland-main', ALMASLAND_URI . '/assets/js/main.js', $script_deps, ALMASLAND_VERSION, true );
 	wp_script_add_data( 'almasland-main', 'strategy', 'defer' );
 	wp_localize_script(
@@ -284,7 +290,7 @@ add_filter( 'loop_shop_columns', 'almasland_shop_columns', 20 );
  * Preload local theme font (no external CDN).
  */
 function almasland_preload_font() {
-	echo '<link rel="preload" href="' . esc_url( ALMASLAND_URI . '/assets/fonts/Vazir.woff2' ) . '" as="font" type="font/woff2" crossorigin>' . "\n";
+	echo '<link rel="preload" href="' . esc_url( ALMASLAND_URI . '/assets/fonts/Vazir%5Bwght%5D.woff2' ) . '" as="font" type="font/woff2" crossorigin>' . "\n";
 }
 add_action( 'wp_head', 'almasland_preload_font', 1 );
 

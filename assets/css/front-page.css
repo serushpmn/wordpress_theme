@@ -9,7 +9,7 @@
 
 .front-page__frame {
   width: 100%;
-  max-width: 1100px;
+  max-width: 1300px;
   margin-inline: auto;
   display: grid;
   gap: clamp(var(--space-6), 4vw, var(--space-10));
@@ -25,7 +25,7 @@
   position: relative;
   display: block;
   width: 100%;
-  aspect-ratio: 1100 / 500;
+  aspect-ratio: 1300 / 400;
   border-radius: clamp(16px, 2vw, 24px);
   overflow: hidden;
   color: var(--color-white);
@@ -720,10 +720,6 @@
   padding-bottom: 34px;
 }
 
-.front-page-offers__slider .swiper-wrapper {
-  align-items: flex-start;
-}
-
 .front-page-offers__slider .swiper-slide {
   display: flex;
   height: auto !important;
@@ -1314,20 +1310,45 @@
   justify-content: space-between;
   gap: 16px;
   margin-bottom: clamp(16px, 2.5vw, 24px);
+  min-width: 0;
 }
 
 .front-page-catalog__tabs {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   gap: 8px;
+  flex: 1 1 auto;
   min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 6px;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x proximity;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--catalog-accent) 35%, transparent) transparent;
+}
+
+.front-page-catalog__tabs::-webkit-scrollbar {
+  height: 4px;
+}
+
+.front-page-catalog__tabs::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.front-page-catalog__tabs::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--catalog-accent) 35%, transparent);
 }
 
 .front-page-catalog__tab {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  flex: 0 0 auto;
   min-height: 38px;
   padding: 8px 16px;
   border: 0;
@@ -1338,6 +1359,8 @@
   font-size: clamp(0.82rem, 1vw, 0.9rem);
   font-weight: 600;
   cursor: pointer;
+  white-space: nowrap;
+  scroll-snap-align: start;
   transition: background-color 0.2s ease, color 0.2s ease;
 }
 
@@ -1526,15 +1549,9 @@
 
   .front-page-catalog__tabs {
     width: 100%;
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    padding-bottom: 6px;
     margin-inline: -4px;
     padding-inline: 4px;
-    -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
-    overscroll-behavior-x: contain;
-    scroll-snap-type: x proximity;
   }
 
   .front-page-catalog__tabs::-webkit-scrollbar {
@@ -1542,8 +1559,6 @@
   }
 
   .front-page-catalog__tab {
-    flex: 0 0 auto;
-    scroll-snap-align: start;
     min-height: 36px;
     padding: 7px 14px;
     font-size: 0.84rem;

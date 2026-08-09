@@ -25,39 +25,35 @@ add_action( 'wp', 'almasland_customize_shop_loop' );
 /**
  * Sort options for horizontal toolbar.
  *
- * @return array<string, array{label:string, orderby:string, order:string}>
+ * Keys match WooCommerce catalog `orderby` values where possible.
+ *
+ * @return array<string, array{label:string, orderby:string}>
  */
 function almasland_get_shop_sort_options() {
 	return array(
 		'date'       => array(
 			'label'   => __( 'جدیدترین', 'almas-land' ),
 			'orderby' => 'date',
-			'order'   => 'DESC',
 		),
 		'popularity' => array(
 			'label'   => __( 'پرفروش‌ترین', 'almas-land' ),
 			'orderby' => 'popularity',
-			'order'   => 'DESC',
 		),
 		'rating'     => array(
 			'label'   => __( 'محبوب‌ترین', 'almas-land' ),
 			'orderby' => 'rating',
-			'order'   => 'DESC',
 		),
 		'price'      => array(
 			'label'   => __( 'ارزان‌ترین', 'almas-land' ),
 			'orderby' => 'price',
-			'order'   => 'ASC',
 		),
 		'price-desc' => array(
 			'label'   => __( 'گران‌ترین', 'almas-land' ),
-			'orderby' => 'price',
-			'order'   => 'DESC',
+			'orderby' => 'price-desc',
 		),
 		'title'      => array(
 			'label'   => __( 'الفبایی', 'almas-land' ),
 			'orderby' => 'title',
-			'order'   => 'ASC',
 		),
 	);
 }
@@ -70,7 +66,6 @@ function almasland_get_shop_sort_options() {
 function almasland_shop_filter_keys() {
 	return array(
 		'orderby',
-		'order',
 		'min_price',
 		'max_price',
 		'in_stock',
@@ -80,7 +75,6 @@ function almasland_shop_filter_keys() {
 		'has_warranty',
 		'min_rating',
 		'filter_brand',
-		'filter_color',
 		'filter_cat',
 	);
 }
@@ -92,14 +86,11 @@ function almasland_shop_filter_keys() {
  */
 function almasland_get_shop_filter_state() {
 	$sort_options = almasland_get_shop_sort_options();
-	$orderby      = isset( $_GET['orderby'] ) ? sanitize_key( wp_unslash( $_GET['orderby'] ) ) : 'date';
-	$order        = isset( $_GET['order'] ) ? strtoupper( sanitize_key( wp_unslash( $_GET['order'] ) ) ) : 'DESC';
+	$orderby      = isset( $_GET['orderby'] ) ? sanitize_title( wp_unslash( $_GET['orderby'] ) ) : 'date';
 	$orderby      = isset( $sort_options[ $orderby ] ) ? $orderby : 'date';
-	$order        = in_array( $order, array( 'ASC', 'DESC' ), true ) ? $order : 'DESC';
 
 	$state = array(
 		'orderby'      => $orderby,
-		'order'        => $order,
 		'min_price'    => isset( $_GET['min_price'] ) ? absint( wp_unslash( $_GET['min_price'] ) ) : 0,
 		'max_price'    => isset( $_GET['max_price'] ) ? absint( wp_unslash( $_GET['max_price'] ) ) : 0,
 		'in_stock'     => ! empty( $_GET['in_stock'] ),
@@ -109,12 +100,10 @@ function almasland_get_shop_filter_state() {
 		'has_warranty' => ! empty( $_GET['has_warranty'] ),
 		'min_rating'   => isset( $_GET['min_rating'] ) ? min( 5, absint( wp_unslash( $_GET['min_rating'] ) ) ) : 0,
 		'filter_brand' => isset( $_GET['filter_brand'] ) ? array_map( 'sanitize_text_field', (array) wp_unslash( $_GET['filter_brand'] ) ) : array(),
-		'filter_color' => isset( $_GET['filter_color'] ) ? array_map( 'sanitize_title', (array) wp_unslash( $_GET['filter_color'] ) ) : array(),
 		'filter_cat'   => isset( $_GET['filter_cat'] ) ? array_map( 'absint', (array) wp_unslash( $_GET['filter_cat'] ) ) : array(),
 	);
 
 	$state['filter_brand'] = array_values( array_filter( $state['filter_brand'] ) );
-	$state['filter_color'] = array_values( array_filter( $state['filter_color'] ) );
 	$state['filter_cat']   = array_values( array_filter( $state['filter_cat'] ) );
 
 	return $state;
@@ -145,12 +134,14 @@ function almasland_shop_filter_url( $args = array(), $remove = array() ) {
 	$current = array();
 	$state   = almasland_get_shop_filter_state();
 	foreach ( almasland_shop_filter_keys() as $key ) {
-		if ( ! isset( $_GET[ $key ] ) ) {
+		if ( ! isset( $_GET[ $key ] ) && 'orderby' !== $key ) {
 			continue;
 		}
 
-		if ( in_array( $key, array( 'orderby', 'order' ), true ) ) {
-			$current[ $key ] = $state[ $key ];
+		if ( 'orderby' === $key ) {
+			if ( isset( $_GET['orderby'] ) && 'date' !== $state['orderby'] ) {
+				$current[ $key ] = $state[ $key ];
+			}
 			continue;
 		}
 
@@ -180,30 +171,6 @@ function almasland_shop_filter_url( $args = array(), $remove = array() ) {
 	);
 
 	return add_query_arg( $merged, $base );
-}
-
-/**
- * Detect product color attribute taxonomy.
- *
- * @return string
- */
-function almasland_get_color_attribute_taxonomy() {
-	$candidates = array( 'pa_color', 'pa_colour', 'pa_رنگ' );
-	foreach ( $candidates as $taxonomy ) {
-		if ( taxonomy_exists( $taxonomy ) ) {
-			return $taxonomy;
-		}
-	}
-
-	$attributes = wc_get_attribute_taxonomies();
-	foreach ( $attributes as $attribute ) {
-		$name = $attribute->attribute_name;
-		if ( false !== strpos( $name, 'color' ) || false !== strpos( $name, 'rang' ) || false !== strpos( $name, 'رنگ' ) ) {
-			return 'pa_' . $name;
-		}
-	}
-
-	return '';
 }
 
 /**
@@ -304,90 +271,6 @@ function almasland_get_shop_brand_options() {
 }
 
 /**
- * Map color label to hex for swatches.
- *
- * @param string $label Color label.
- * @return string
- */
-function almasland_get_color_swatch_hex( $label ) {
-	$map = array(
-		'black'   => '#111827',
-		'white'   => '#f8fafc',
-		'red'     => '#ef4444',
-		'blue'    => '#2563eb',
-		'green'   => '#16a34a',
-		'yellow'  => '#facc15',
-		'orange'  => '#f97316',
-		'purple'  => '#8b5cf6',
-		'pink'    => '#ec4899',
-		'gray'    => '#94a3b8',
-		'grey'    => '#94a3b8',
-		'silver'  => '#cbd5e1',
-		'gold'    => '#d4af37',
-		'brown'   => '#92400e',
-		'مشکی'    => '#111827',
-		'سفید'    => '#f8fafc',
-		'قرمز'    => '#ef4444',
-		'آبی'     => '#2563eb',
-		'سبز'     => '#16a34a',
-		'زرد'     => '#facc15',
-		'نارنجی'  => '#f97316',
-		'بنفش'    => '#8b5cf6',
-		'صورتی'   => '#ec4899',
-		'خاکستری' => '#94a3b8',
-		'نقره‌ای' => '#cbd5e1',
-		'طلایی'   => '#d4af37',
-	);
-
-	$key = strtolower( trim( $label ) );
-	if ( isset( $map[ $key ] ) ) {
-		return $map[ $key ];
-	}
-
-	$key = trim( $label );
-	if ( isset( $map[ $key ] ) ) {
-		return $map[ $key ];
-	}
-
-	return '#' . substr( md5( $label ), 0, 6 );
-}
-
-/**
- * Get available color filter options.
- *
- * @return array<int, array{value:string, label:string, hex:string, count:int}>
- */
-function almasland_get_shop_color_options() {
-	$taxonomy = almasland_get_color_attribute_taxonomy();
-	if ( ! $taxonomy ) {
-		return array();
-	}
-
-	$terms = get_terms(
-		array(
-			'taxonomy'   => $taxonomy,
-			'hide_empty' => true,
-		)
-	);
-
-	if ( is_wp_error( $terms ) ) {
-		return array();
-	}
-
-	$options = array();
-	foreach ( $terms as $term ) {
-		$options[] = array(
-			'value' => $term->slug,
-			'label' => $term->name,
-			'hex'   => almasland_get_color_swatch_hex( $term->name ),
-			'count' => (int) $term->count,
-		);
-	}
-
-	return $options;
-}
-
-/**
  * Get category filter options.
  *
  * @return WP_Term[]
@@ -425,14 +308,23 @@ function almasland_get_shop_category_options() {
  * @param WP_Query $query Query.
  */
 function almasland_apply_shop_filters( $query ) {
-	if ( is_admin() || ! ( is_shop() || is_product_taxonomy() ) ) {
+	if ( is_admin() || ! $query->is_main_query() || ! ( is_shop() || is_product_taxonomy() ) ) {
 		return;
 	}
 
 	$state = almasland_get_shop_filter_state();
 
-	$meta_query = (array) $query->get( 'meta_query' );
-	$tax_query  = (array) $query->get( 'tax_query' );
+	$meta_query = $query->get( 'meta_query' );
+	$tax_query  = $query->get( 'tax_query' );
+	$meta_query = is_array( $meta_query ) ? $meta_query : array();
+	$tax_query  = is_array( $tax_query ) ? $tax_query : array();
+
+	// Alphabetical sort is not a native WooCommerce orderby key.
+	if ( 'title' === $state['orderby'] ) {
+		$query->set( 'orderby', 'title' );
+		$query->set( 'order', 'ASC' );
+		$query->set( 'meta_key', '' );
+	}
 
 	if ( $state['in_stock'] ) {
 		$meta_query[] = array(
@@ -440,15 +332,29 @@ function almasland_apply_shop_filters( $query ) {
 			'value'   => 'instock',
 			'compare' => '=',
 		);
+		$tax_query[] = array(
+			'taxonomy' => 'product_visibility',
+			'field'    => 'name',
+			'terms'    => array( 'outofstock' ),
+			'operator' => 'NOT IN',
+		);
 	}
 
 	if ( $state['on_sale'] ) {
-		$meta_query[] = array(
-			'key'     => '_sale_price',
-			'value'   => 0,
-			'compare' => '>',
-			'type'    => 'NUMERIC',
-		);
+		$sale_ids = array_map( 'absint', wc_get_product_ids_on_sale() );
+		if ( empty( $sale_ids ) ) {
+			$sale_ids = array( 0 );
+		}
+
+		$existing_in = $query->get( 'post__in' );
+		if ( ! empty( $existing_in ) ) {
+			$sale_ids = array_values( array_intersect( array_map( 'absint', (array) $existing_in ), $sale_ids ) );
+			if ( empty( $sale_ids ) ) {
+				$sale_ids = array( 0 );
+			}
+		}
+
+		$query->set( 'post__in', $sale_ids );
 	}
 
 	if ( $state['featured'] ) {
@@ -518,8 +424,9 @@ function almasland_apply_shop_filters( $query ) {
 			}
 		}
 
+		$brand_clauses = array();
 		if ( $meta_brands ) {
-			$meta_query[] = array(
+			$brand_clauses[] = array(
 				'key'     => '_almas_brand',
 				'value'   => $meta_brands,
 				'compare' => 'IN',
@@ -535,17 +442,12 @@ function almasland_apply_shop_filters( $query ) {
 				'operator' => 'IN',
 			);
 		}
-	}
 
-	if ( ! empty( $state['filter_color'] ) ) {
-		$color_taxonomy = almasland_get_color_attribute_taxonomy();
-		if ( $color_taxonomy ) {
-			$tax_query[] = array(
-				'taxonomy' => $color_taxonomy,
-				'field'    => 'slug',
-				'terms'    => $state['filter_color'],
-				'operator' => 'IN',
-			);
+		// Meta brands only — OR across selected brand names.
+		if ( count( $brand_clauses ) === 1 ) {
+			$meta_query[] = $brand_clauses[0];
+		} elseif ( count( $brand_clauses ) > 1 ) {
+			$meta_query[] = array_merge( array( 'relation' => 'OR' ), $brand_clauses );
 		}
 	}
 
@@ -555,24 +457,39 @@ function almasland_apply_shop_filters( $query ) {
 			'field'    => 'term_id',
 			'terms'    => $state['filter_cat'],
 			'operator' => 'IN',
+			'include_children' => true,
 		);
 	}
 
-	if ( count( $meta_query ) > 1 ) {
+	$meta_clauses = array_filter(
+		$meta_query,
+		static function ( $clause ) {
+			return is_array( $clause );
+		}
+	);
+	if ( count( $meta_clauses ) > 1 && ! isset( $meta_query['relation'] ) ) {
 		$meta_query['relation'] = 'AND';
 	}
-	if ( count( $tax_query ) > 1 ) {
+
+	$tax_clauses = array_filter(
+		$tax_query,
+		static function ( $clause, $key ) {
+			return is_array( $clause ) && 'relation' !== $key;
+		},
+		ARRAY_FILTER_USE_BOTH
+	);
+	if ( count( $tax_clauses ) > 1 && ! isset( $tax_query['relation'] ) ) {
 		$tax_query['relation'] = 'AND';
 	}
 
-	if ( $meta_query ) {
+	if ( ! empty( $meta_clauses ) ) {
 		$query->set( 'meta_query', $meta_query );
 	}
-	if ( $tax_query ) {
+	if ( ! empty( $tax_clauses ) ) {
 		$query->set( 'tax_query', $tax_query );
 	}
 }
-add_action( 'woocommerce_product_query', 'almasland_apply_shop_filters' );
+add_action( 'woocommerce_product_query', 'almasland_apply_shop_filters', 20 );
 
 /**
  * Render custom result count.
@@ -609,16 +526,9 @@ function almasland_shop_result_count() {
  * Render horizontal sort bar.
  */
 function almasland_shop_sort_bar() {
-	$state   = almasland_get_shop_filter_state();
-	$options = almasland_get_shop_sort_options();
-	$current = $state['orderby'];
-	if ( 'price' === $current && 'ASC' === strtoupper( $state['order'] ) ) {
-		$active_key = 'price';
-	} elseif ( 'price' === $current && 'DESC' === strtoupper( $state['order'] ) ) {
-		$active_key = 'price-desc';
-	} else {
-		$active_key = $current;
-	}
+	$state      = almasland_get_shop_filter_state();
+	$options    = almasland_get_shop_sort_options();
+	$active_key = $state['orderby'];
 	?>
 	<div class="shop-sort-bar" role="toolbar" aria-label="<?php esc_attr_e( 'مرتب‌سازی محصولات', 'almas-land' ); ?>">
 		<span class="shop-sort-bar__label"><?php esc_html_e( 'مرتب‌سازی:', 'almas-land' ); ?></span>
@@ -626,10 +536,8 @@ function almasland_shop_sort_bar() {
 			<?php foreach ( $options as $key => $option ) : ?>
 				<?php
 				$url = almasland_shop_filter_url(
-					array(
-						'orderby' => $option['orderby'],
-						'order'   => $option['order'],
-					)
+					'date' === $option['orderby'] ? array() : array( 'orderby' => $option['orderby'] ),
+					'date' === $option['orderby'] ? array( 'orderby' ) : array()
 				);
 				?>
 				<a class="shop-sort-pill<?php echo $active_key === $key ? ' is-active' : ''; ?>" href="<?php echo esc_url( $url ); ?>">
@@ -648,14 +556,9 @@ function almasland_shop_active_filters() {
 	$state    = almasland_get_shop_filter_state();
 	$chips    = array();
 	$brands   = almasland_get_shop_brand_options();
-	$colors   = almasland_get_shop_color_options();
 	$brandmap = array();
 	foreach ( $brands as $brand ) {
 		$brandmap[ $brand['value'] ] = $brand['label'];
-	}
-	$colormap = array();
-	foreach ( $colors as $color ) {
-		$colormap[ $color['value'] ] = $color['label'];
 	}
 
 	if ( $state['in_stock'] ) {
@@ -718,19 +621,6 @@ function almasland_shop_active_filters() {
 		);
 	}
 
-	foreach ( $state['filter_color'] as $color_value ) {
-		$chips[] = array(
-			'label' => isset( $colormap[ $color_value ] ) ? $colormap[ $color_value ] : $color_value,
-			'url'   => almasland_shop_filter_url(
-				array(
-					'filter_color' => array_values(
-						array_diff( $state['filter_color'], array( $color_value ) )
-					),
-				)
-			),
-		);
-	}
-
 	foreach ( $state['filter_cat'] as $cat_id ) {
 		$term = get_term( $cat_id, 'product_cat' );
 		if ( ! $term || is_wp_error( $term ) ) {
@@ -751,6 +641,14 @@ function almasland_shop_active_filters() {
 	if ( ! $chips ) {
 		return;
 	}
+
+	$clear_url = wc_get_page_permalink( 'shop' );
+	if ( is_product_taxonomy() ) {
+		$term_link = get_term_link( get_queried_object() );
+		if ( ! is_wp_error( $term_link ) ) {
+			$clear_url = $term_link;
+		}
+	}
 	?>
 	<div class="shop-active-filters" aria-label="<?php esc_attr_e( 'فیلترهای فعال', 'almas-land' ); ?>">
 		<?php foreach ( $chips as $chip ) : ?>
@@ -759,7 +657,7 @@ function almasland_shop_active_filters() {
 				<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6.4 5 12.6 12.6-1.4 1.4L5 6.4 6.4 5Zm12.6 1.4L6.4 19 5 17.6 17.6 5 19 6.4Z"/></svg>
 			</a>
 		<?php endforeach; ?>
-		<a class="shop-active-filter shop-active-filter--clear" href="<?php echo esc_url( is_shop() ? wc_get_page_permalink( 'shop' ) : get_term_link( get_queried_object() ) ); ?>">
+		<a class="shop-active-filter shop-active-filter--clear" href="<?php echo esc_url( $clear_url ); ?>">
 			<?php esc_html_e( 'پاک کردن همه', 'almas-land' ); ?>
 		</a>
 	</div>
@@ -774,7 +672,6 @@ function almasland_shop_filter_form() {
 	$action     = is_shop() ? wc_get_page_permalink( 'shop' ) : get_term_link( get_queried_object() );
 	$categories = almasland_get_shop_category_options();
 	$brands     = almasland_get_shop_brand_options();
-	$colors     = almasland_get_shop_color_options();
 
 	if ( is_wp_error( $action ) ) {
 		$action = wc_get_page_permalink( 'shop' );
@@ -783,9 +680,6 @@ function almasland_shop_filter_form() {
 	<form class="shop-filter-form" method="get" action="<?php echo esc_url( $action ); ?>">
 		<?php if ( $state['orderby'] && 'date' !== $state['orderby'] ) : ?>
 			<input type="hidden" name="orderby" value="<?php echo esc_attr( $state['orderby'] ); ?>">
-		<?php endif; ?>
-		<?php if ( $state['order'] && 'DESC' !== strtoupper( $state['order'] ) ) : ?>
-			<input type="hidden" name="order" value="<?php echo esc_attr( $state['order'] ); ?>">
 		<?php endif; ?>
 
 		<div class="shop-filter-quick">
@@ -841,21 +735,6 @@ function almasland_shop_filter_form() {
 			</details>
 		<?php endif; ?>
 
-		<?php if ( $colors ) : ?>
-			<details class="shop-filter-group" open>
-				<summary><?php esc_html_e( 'رنگ', 'almas-land' ); ?></summary>
-				<div class="shop-filter-group__body shop-filter-colors">
-					<?php foreach ( $colors as $color ) : ?>
-						<label class="shop-color-swatch<?php echo in_array( $color['value'], $state['filter_color'], true ) ? ' is-active' : ''; ?>" title="<?php echo esc_attr( $color['label'] ); ?>">
-							<input type="checkbox" name="filter_color[]" value="<?php echo esc_attr( $color['value'] ); ?>" <?php checked( in_array( $color['value'], $state['filter_color'], true ) ); ?>>
-							<span style="--swatch-color: <?php echo esc_attr( $color['hex'] ); ?>;"></span>
-							<small><?php echo esc_html( $color['label'] ); ?></small>
-						</label>
-					<?php endforeach; ?>
-				</div>
-			</details>
-		<?php endif; ?>
-
 		<details class="shop-filter-group" open>
 			<summary><?php esc_html_e( 'امتیاز محصول', 'almas-land' ); ?></summary>
 			<div class="shop-filter-group__body shop-filter-rating">
@@ -877,11 +756,11 @@ function almasland_shop_filter_form() {
 			<div class="shop-filter-group__body shop-filter-price">
 				<label>
 					<span><?php esc_html_e( 'حداقل', 'almas-land' ); ?></span>
-					<input type="number" name="min_price" min="0" step="100000" value="<?php echo $state['min_price'] ? esc_attr( (string) $state['min_price'] ) : ''; ?>" placeholder="۰">
+					<input type="number" name="min_price" min="0" step="100000" inputmode="numeric" value="<?php echo $state['min_price'] ? esc_attr( (string) $state['min_price'] ) : ''; ?>" placeholder="۰">
 				</label>
 				<label>
 					<span><?php esc_html_e( 'حداکثر', 'almas-land' ); ?></span>
-					<input type="number" name="max_price" min="0" step="100000" value="<?php echo $state['max_price'] ? esc_attr( (string) $state['max_price'] ) : ''; ?>" placeholder="∞">
+					<input type="number" name="max_price" min="0" step="100000" inputmode="numeric" value="<?php echo $state['max_price'] ? esc_attr( (string) $state['max_price'] ) : ''; ?>" placeholder="∞">
 				</label>
 			</div>
 		</details>

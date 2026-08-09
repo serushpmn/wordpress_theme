@@ -9,7 +9,7 @@ if ( ! class_exists( 'WooCommerce' ) ) {
 	return;
 }
 
-$categories = function_exists( 'almasland_get_home_catalog_categories' ) ? almasland_get_home_catalog_categories( 4 ) : array();
+$categories = function_exists( 'almasland_get_home_catalog_categories' ) ? almasland_get_home_catalog_categories( 10 ) : array();
 $limit      = 8;
 $all_products = almasland_get_home_catalog_products( 0, $limit );
 

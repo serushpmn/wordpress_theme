@@ -29,13 +29,19 @@ $sales_text       = $product->get_meta( '_almas_sales' );
 $warranty_text    = $product->get_meta( '_almas_warranty' );
 $subtitle         = almasland_get_product_english_name( $product );
 $rating           = $product->get_average_rating();
-$discount_percent = almasland_get_discount_percent( $product );
-$stock_qty        = $product->get_stock_quantity();
-$stock_label      = $product->is_in_stock()
-	? ( $stock_qty ? sprintf( esc_html__( '%s عدد در انبار موجود است', 'almas-land' ), almasland_persian_digits( $stock_qty ) ) : esc_html__( 'آماده ارسال', 'almas-land' ) )
-	: esc_html__( 'ناموجود', 'almas-land' );
-$is_in_cart       = false;
-if ( WC()->cart ) {
+$stock_qty   = $product->get_stock_quantity();
+$is_variable = $product->is_type( 'variable' );
+$is_used_product = has_term( 'used', 'product_cat', $product->get_id() );
+$apsb_specs_html  = $is_used_product && function_exists( 'apsb_render_product_specs' ) ? apsb_render_product_specs( $product->get_id() ) : '';
+$stock_label = $is_variable
+	? esc_html__( 'موجودی پس از انتخاب گزینه مشخص می‌شود', 'almas-land' )
+	: (
+		$product->is_in_stock()
+			? ( $stock_qty ? sprintf( esc_html__( '%s عدد در انبار موجود است', 'almas-land' ), almasland_persian_digits( $stock_qty ) ) : esc_html__( 'آماده ارسال', 'almas-land' ) ) : esc_html__( 'ناموجود', 'almas-land' )
+	);
+$is_in_cart = false;
+
+if ( ! $is_variable && WC()->cart ) {
 	foreach ( WC()->cart->get_cart() as $cart_item ) {
 		$cart_product_id = (int) ( ! empty( $cart_item['variation_id'] ) ? $cart_item['variation_id'] : $cart_item['product_id'] );
 		$cart_parent_id  = ! empty( $cart_item['product_id'] ) && (int) $cart_item['product_id'] !== $cart_product_id ? (int) $cart_item['product_id'] : 0;
@@ -45,8 +51,11 @@ if ( WC()->cart ) {
 		}
 	}
 }
+
+$price_html      = $product->get_price_html();
+$buy_price_html = function_exists( 'almasland_get_buy_price_html' ) ? almasland_get_buy_price_html( $product ) : $price_html;
 ?>
-<article id="product-<?php the_ID(); ?>" <?php wc_product_class( '', $product ); ?>>
+<article id="product-<?php the_ID(); ?>" <?php wc_product_class( $is_variable ? 'product--variable' : '', $product ); ?>>
 	<?php almasland_breadcrumb(); ?>
 	<div class="product-info">
 			<?php if ( $badges ) : ?>
@@ -65,9 +74,9 @@ if ( WC()->cart ) {
 
 
 		</div>
-<section class="product-wrapper-content">
+<section class="product-wrapper-content<?php echo $is_used_product ? ' product-wrapper-content--used' : ''; ?>">
 	<section class="product-main-content">
-		<section class="product-summary" aria-labelledby="product-title">
+		<section class="product-summary<?php echo $is_used_product ? ' product-summary--used' : ''; ?>" aria-labelledby="product-title">
 			<div class="product-gallery" aria-label="<?php esc_attr_e( 'تصاویر محصول', 'almas-land' ); ?>">
 				<div class="product-gallery__stage">
 					<div class="product-gallery__main">
@@ -98,10 +107,36 @@ if ( WC()->cart ) {
 				<?php endif; ?>
 			</div>
 
-			<div class="product-info">
+			<div class="product-info<?php echo $is_used_product ? ' product-info--used' : ''; ?>">
 			<?php if ( $brand ) : ?>
 				<p class="product-info__brand"><?php esc_html_e( 'برند:', 'almas-land' ); ?> <strong><?php echo esc_html( $brand ); ?></strong></p>
 			<?php endif; ?>
+
+			<?php if ( $is_used_product && $apsb_specs_html ) : ?>
+				<section class="product-info-apsb" aria-labelledby="used-product-specs-title">
+					<div class="product-info-apsb__header">
+						<h2 id="used-product-specs-title"><?php esc_html_e( 'گزارش وضعیت و سلامت دستگاه', 'almas-land' ); ?></h2>
+						<p><?php esc_html_e( 'دستگاه توسط کارشناسان الماس لند بررسی و تست شده است.', 'almas-land' ); ?></p>
+					</div>
+					<div class="product-info-apsb__body">
+						<?php echo $apsb_specs_html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+					</div>
+					<div class="product-info-apsb__footer">
+						<div class="product-info-apsb__trust">
+							<span class="product-info-apsb__trust-icon" aria-hidden="true">✓</span>
+							<div>
+								<h3><?php esc_html_e( 'تست و بررسی شده توسط کارشناسان الماس لند', 'almas-land' ); ?></h3>
+								<p><?php esc_html_e( 'ما به شفافیت در فروش اعتماد داریم. هر دستگاه قبل از فروش به صورت کامل بررسی و تست می‌شود.', 'almas-land' ); ?></p>
+							</div>
+						</div>
+						<div class="product-info-apsb__legend" aria-label="<?php esc_attr_e( 'راهنمای وضعیت‌ها', 'almas-land' ); ?>">
+							<span class="product-info-apsb__legend-item product-info-apsb__legend-item--good"><?php esc_html_e( 'سالم / تأیید شده', 'almas-land' ); ?></span>
+							<span class="product-info-apsb__legend-item product-info-apsb__legend-item--attention"><?php esc_html_e( 'نیازمند توجه', 'almas-land' ); ?></span>
+							<span class="product-info-apsb__legend-item product-info-apsb__legend-item--problem"><?php esc_html_e( 'دارای مشکل', 'almas-land' ); ?></span>
+						</div>
+					</div>
+				</section>
+			<?php else : ?>
 				<?php if ( $summary_specs ) : ?>
 					<dl class="product-spec-list" aria-label="<?php esc_attr_e( 'مشخصات کوتاه محصول', 'almas-land' ); ?>">
 						<?php foreach ( $summary_specs as $label => $value ) : ?>
@@ -113,8 +148,9 @@ if ( WC()->cart ) {
 				<?php if ( count( $specs ) > count( $summary_specs ) ) : ?>
 					<a class="product-more-link" href="#spec-title"><?php esc_html_e( 'مشاهده مشخصات بیشتر', 'almas-land' ); ?></a>
 				<?php endif; ?>
+			<?php endif; ?>
 
-				<?php if ( $product->get_short_description() ) : ?>
+				<?php if ( ! $is_used_product && $product->get_short_description() ) : ?>
 					<div class="product-excerpt entry-content">
 						<?php echo wp_kses_post( wpautop( $product->get_short_description() ) ); ?>
 					</div>
@@ -172,13 +208,15 @@ if ( WC()->cart ) {
 					<p class="product-empty-specs"><?php esc_html_e( 'مشخصات تکمیلی برای این محصول ثبت نشده است.', 'almas-land' ); ?></p>
 				<?php endif; ?>
 			</section>
+
+
 		</section>
 	</section>
 
 	<aside class="buy-card" aria-label="<?php esc_attr_e( 'خرید محصول', 'almas-land' ); ?>">
 			<div class="seller-status">
 				<span><?php echo esc_html( $product->get_meta( '_almas_return' ) ? $product->get_meta( '_almas_return' ) : __( '۴۸ ساعت ضمانت بازگشت بی قید و شرط', 'almas-land' ) ); ?></span>
-				<span class="stock <?php echo esc_attr( almasland_stock_class( $product ) ); ?>"><?php echo esc_html( $stock_label ); ?></span>
+				<span class="stock <?php echo esc_attr( almasland_stock_class( $product ) ); ?>" data-product-stock><?php echo esc_html( $stock_label ); ?></span>
 			</div>
 
 			<div class="warranty-box">
@@ -216,19 +254,25 @@ if ( WC()->cart ) {
 					</div>
 				</div>
 			<?php else : ?>
+				<?php if ( $is_variable ) : ?>
+					<p class="buy-card__choose-hint"><?php esc_html_e( 'لطفاً گزینه‌های محصول را انتخاب کنید', 'almas-land' ); ?></p>
+				<?php endif; ?>
 				<?php woocommerce_template_single_add_to_cart(); ?>
 			<?php endif; ?>
 
-			<div class="buy-card__price">
-				<?php if ( $product->is_on_sale() && $product->get_regular_price() ) : ?>
-					<div class="buy-card__price-meta">
-						<?php if ( $discount_percent > 0 ) : ?>
-							<span class="discount-badge"><?php echo esc_html( almasland_persian_digits( $discount_percent ) ); ?>٪</span>
-						<?php endif; ?>
-						<del><?php echo wp_kses_post( wc_price( $product->get_regular_price() ) ); ?></del>
+			<div
+				class="buy-card__price"
+				data-buy-price
+				data-price-default="<?php echo esc_attr( wp_strip_all_tags( $buy_price_html ) ); ?>"
+			>
+				<?php if ( $is_variable ) : ?>
+					<div class="buy-card__price-default" data-price-default-html>
+						<?php echo $buy_price_html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
 					</div>
+					<div class="buy-card__price-selected" data-price-selected-html hidden></div>
+				<?php else : ?>
+					<?php echo $buy_price_html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
 				<?php endif; ?>
-				<strong class="buy-card__price-current"><?php echo wp_kses_post( wc_price( wc_get_price_to_display( $product ) ) ); ?></strong>
 			</div>
 	</aside>
 </section>
@@ -236,20 +280,19 @@ if ( WC()->cart ) {
 </article>
 
 <div class="mobile-buy-bar" aria-label="<?php esc_attr_e( 'خرید سریع محصول', 'almas-land' ); ?>">
-	<div class="mobile-buy-bar__price">
-		<?php if ( $product->is_on_sale() && $product->get_regular_price() ) : ?>
-			<div class="mobile-buy-bar__price-meta">
-				<?php if ( $discount_percent > 0 ) : ?>
-					<span class="discount-badge"><?php echo esc_html( almasland_persian_digits( $discount_percent ) ); ?>٪</span>
-				<?php endif; ?>
-				<del><?php echo wp_kses_post( wc_price( $product->get_regular_price() ) ); ?></del>
+	<div class="mobile-buy-bar__price" data-mobile-buy-price>
+		<?php if ( $is_variable ) : ?>
+			<div class="buy-card__price-default" data-price-default-html>
+				<?php echo $buy_price_html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
 			</div>
+			<div class="buy-card__price-selected" data-price-selected-html hidden></div>
+		<?php else : ?>
+			<?php echo $buy_price_html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
 		<?php endif; ?>
-		<strong class="mobile-buy-bar__price-current"><?php echo wp_kses_post( wc_price( wc_get_price_to_display( $product ) ) ); ?></strong>
 	</div>
 	<?php if ( $is_in_cart ) : ?>
 		<a class="btn btn--primary" href="<?php echo esc_url( wc_get_cart_url() ); ?>"><?php esc_html_e( 'مشاهده سبد خرید', 'almas-land' ); ?></a>
 	<?php else : ?>
-		<button class="btn btn--primary" type="button" data-mobile-add-to-cart><?php esc_html_e( 'افزودن به سبد خرید', 'almas-land' ); ?></button>
+		<button class="btn btn--primary" type="button" data-mobile-add-to-cart><?php echo esc_html( $is_variable ? __( 'انتخاب و افزودن به سبد', 'almas-land' ) : __( 'افزودن به سبد خرید', 'almas-land' ) ); ?></button>
 	<?php endif; ?>
 </div>

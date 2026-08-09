@@ -61,6 +61,19 @@ floatingContactPhone.textContent = STORE_PHONE_DISPLAY;
 floatingContact.append(floatingContactLabel, floatingContactPhone);
 document.body.append(floatingContact);
 
+floatingContact.addEventListener("pointerdown", () => {
+  floatingContact.classList.remove("is-tapped");
+  // Force reflow so the tap animation can replay on rapid taps.
+  void floatingContact.offsetWidth;
+  floatingContact.classList.add("is-tapped");
+});
+
+floatingContact.addEventListener("animationend", (event) => {
+  if (event.animationName === "floating-contact-tap") {
+    floatingContact.classList.remove("is-tapped");
+  }
+});
+
 const mobileContactQuery = window.matchMedia?.("(max-width: 720px)");
 
 function updateFloatingContactHref() {
@@ -201,9 +214,9 @@ viewButtons.forEach((button) => {
   });
 });
 
-document.querySelectorAll(".shop-filter-toggle input, .shop-color-swatch input").forEach((input) => {
+document.querySelectorAll(".shop-filter-toggle input").forEach((input) => {
   const syncToggleState = () => {
-    const label = input.closest(".shop-filter-toggle, .shop-color-swatch");
+    const label = input.closest(".shop-filter-toggle");
     if (!label) return;
     label.classList.toggle("is-active", input.checked);
   };
@@ -219,12 +232,41 @@ document.addEventListener("keydown", (event) => {
 
 const galleryMain = document.querySelector("[data-gallery-main]");
 const galleryThumbs = document.querySelectorAll("[data-gallery-thumb]");
+let galleryMainFadeTimeout = null;
+let galleryMainLoadHandler = null;
+
+const updateGalleryMainSrc = (src) => {
+  if (!galleryMain || !src) return;
+  if (galleryMain.src === src) {
+    galleryMain.style.opacity = "1";
+    return;
+  }
+
+  galleryMain.style.opacity = "0";
+  if (galleryMainFadeTimeout) {
+    clearTimeout(galleryMainFadeTimeout);
+  }
+
+  if (galleryMainLoadHandler) {
+    galleryMain.removeEventListener("load", galleryMainLoadHandler);
+  }
+
+  galleryMainLoadHandler = () => {
+    galleryMain.style.opacity = "1";
+    galleryMain.removeEventListener("load", galleryMainLoadHandler);
+    galleryMainLoadHandler = null;
+  };
+
+  galleryMain.addEventListener("load", galleryMainLoadHandler);
+  galleryMainFadeTimeout = setTimeout(() => {
+    galleryMain.src = src;
+  }, 120);
+};
 
 galleryThumbs.forEach((thumb) => {
   thumb.addEventListener("click", () => {
     const src = thumb.getAttribute("data-gallery-thumb");
-    if (!galleryMain || !src) return;
-    galleryMain.src = src;
+    updateGalleryMainSrc(src);
     galleryThumbs.forEach((item) => item.classList.remove("is-active"));
     thumb.classList.add("is-active");
   });
@@ -544,6 +586,7 @@ function maybeOpenCartModalFromNotice() {
 
 initSingleProductCartHandlers();
 maybeOpenCartModalFromNotice();
+initVariableProductUI();
 
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") {
@@ -551,10 +594,107 @@ document.addEventListener("keydown", (event) => {
   }
 });
 
+function setPriceBlocks(html, isSelected) {
+  document.querySelectorAll("[data-price-default-html]").forEach((el) => {
+    el.hidden = Boolean(isSelected);
+  });
+  document.querySelectorAll("[data-price-selected-html]").forEach((el) => {
+    if (isSelected && html) {
+      el.innerHTML = html;
+      el.hidden = false;
+    } else {
+      el.innerHTML = "";
+      el.hidden = true;
+    }
+  });
+}
+
+function setProductStockLabel(html) {
+  const stock = document.querySelector("[data-product-stock]");
+  if (!stock) return;
+
+  if (!html) {
+    stock.textContent = stock.dataset.defaultStock || stock.textContent;
+    return;
+  }
+
+  const temp = document.createElement("div");
+  temp.innerHTML = html;
+  const text = (temp.textContent || "").trim();
+  if (text) {
+    stock.textContent = text;
+  }
+}
+
+function setVariationImage(variation) {
+  const mainImage = document.querySelector("[data-gallery-main]");
+  if (!mainImage) return;
+
+  if (!mainImage.dataset.defaultSrc) {
+    mainImage.dataset.defaultSrc = mainImage.getAttribute("src") || "";
+  }
+
+  const imageSrc =
+    variation?.image?.full_src ||
+    variation?.image?.src ||
+    variation?.image?.url ||
+    "";
+
+  if (imageSrc) {
+    mainImage.setAttribute("src", imageSrc);
+    mainImage.setAttribute("srcset", variation?.image?.srcset || "");
+    return;
+  }
+
+  if (mainImage.dataset.defaultSrc) {
+    mainImage.setAttribute("src", mainImage.dataset.defaultSrc);
+    mainImage.removeAttribute("srcset");
+  }
+}
+
+function setChooseHintVisible(isVisible) {
+  const hint = document.querySelector(".buy-card__choose-hint");
+  if (hint) {
+    hint.hidden = !isVisible;
+  }
+}
+
+function initVariableProductUI() {
+  if (!document.body.classList.contains("single-product")) {
+    return;
+  }
+
+  const form = document.querySelector("form.variations_form");
+  const stock = document.querySelector("[data-product-stock]");
+  if (stock && !stock.dataset.defaultStock) {
+    stock.dataset.defaultStock = stock.textContent.trim();
+  }
+
+  if (!form || typeof window.jQuery === "undefined") {
+    return;
+  }
+
+  const $form = window.jQuery(form);
+
+  $form.on("found_variation", (_event, variation) => {
+    setPriceBlocks(variation?.almas_price_html || variation?.price_html || "", true);
+    setProductStockLabel(variation?.availability_html || "");
+    setVariationImage(variation);
+    setChooseHintVisible(false);
+  });
+
+  $form.on("reset_data hide_variation", () => {
+    setPriceBlocks("", false);
+    setProductStockLabel("");
+    setVariationImage(null);
+    setChooseHintVisible(true);
+  });
+}
+
 document.querySelectorAll(".cart-item .quantity-control .quantity").forEach((quantity) => {
-	if (quantity.dataset.enhanced === "true") {
-		return;
-	}
+  if (quantity.dataset.enhanced === "true") {
+    return;
+  }
 
   const input = quantity.querySelector("input.qty");
   if (!input) {
@@ -587,17 +727,17 @@ document.querySelectorAll(".cart-item .quantity-control .quantity").forEach((qua
   plus.addEventListener("click", () => {
     input.value = String(Number(input.value || 1) + 1);
     input.dispatchEvent(new Event("change", { bubbles: true }));
-	});
+  });
 });
 
 const cartUpdateButton = document.querySelector(".woocommerce-cart-form .cart-update-button");
 
 document.querySelectorAll(".woocommerce-cart-form input.qty").forEach((input) => {
-	input.addEventListener("change", () => {
-		if (cartUpdateButton) {
-			cartUpdateButton.disabled = false;
-		}
-	});
+  input.addEventListener("change", () => {
+    if (cartUpdateButton) {
+      cartUpdateButton.disabled = false;
+    }
+  });
 });
 
 const megaToggles = document.querySelectorAll("[data-mega-toggle]");
@@ -984,7 +1124,7 @@ function initFrontPageCatalogFilters() {
     }
 
     if (activeTab && typeof activeTab.scrollIntoView === "function") {
-      activeTab.scrollIntoView({ behavior: "smooth", inline: "nearest", block: "nearest" });
+      activeTab.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
     }
   };
 

@@ -608,7 +608,7 @@ function almasland_order_status_label_class( $status ) {
 		'pending'    => 'status-label--info',
 		'cancelled'  => 'status-label--muted',
 		'refunded'   => 'status-label--info',
-		'failed'     => 'status-label--muted',
+		'failed'     => 'status-label--danger',
 	);
 
 	return isset( $map[ $status ] ) ? $map[ $status ] : 'status-label--info';
@@ -699,6 +699,84 @@ function almasland_get_discount_percent( $product ) {
 
 	return (int) round( ( ( $regular - $sale ) / $regular ) * 100 );
 }
+
+/**
+ * Buy-card price markup: current price on top, discount badge + strikethrough below.
+ *
+ * @param WC_Product $product Product or variation.
+ * @return string
+ */
+function almasland_get_buy_price_html( $product ) {
+	if ( ! $product || ! is_a( $product, 'WC_Product' ) ) {
+		return '';
+	}
+
+	$from_label = '';
+	$current    = 0.0;
+	$regular    = 0.0;
+	$discount   = 0;
+
+	if ( $product->is_type( 'variable' ) ) {
+		$current  = (float) $product->get_variation_price( 'min', true );
+		$max      = (float) $product->get_variation_price( 'max', true );
+		$regular  = (float) $product->get_variation_regular_price( 'min', true );
+		$discount = ( $regular > $current && $regular > 0 )
+			? (int) round( ( ( $regular - $current ) / $regular ) * 100 )
+			: 0;
+
+		if ( abs( $current - $max ) > 0.0001 ) {
+			$from_label = __( 'از', 'almas-land' );
+			$discount   = 0;
+			$regular    = 0;
+		}
+	} else {
+		$current  = (float) wc_get_price_to_display( $product );
+		$regular  = ( '' !== $product->get_regular_price() )
+			? (float) wc_get_price_to_display( $product, array( 'price' => $product->get_regular_price() ) )
+			: 0.0;
+		$discount = almasland_get_discount_percent( $product );
+	}
+
+	if ( $current <= 0 ) {
+		return '';
+	}
+
+	ob_start();
+
+	if ( $discount > 0 && $regular > $current ) {
+		?>
+		<div class="buy-card__price-meta">
+			<span class="discount-badge"><?php echo esc_html( almasland_persian_digits( (string) $discount ) ); ?>٪</span>
+			<del><?php echo wp_kses_post( wc_price( $regular ) ); ?></del>
+		</div>
+		<?php
+	}
+	?>
+	<strong class="buy-card__price-current">
+		<?php if ( $from_label ) : ?>
+			<span class="buy-card__price-from"><?php echo esc_html( $from_label ); ?></span>
+		<?php endif; ?>
+		<?php echo wp_kses_post( wc_price( $current ) ); ?>
+	</strong>
+	<?php
+
+	return (string) ob_get_clean();
+}
+
+/**
+ * Expose theme price markup for each variation (used by single-product JS).
+ *
+ * @param array                $data      Variation data.
+ * @param WC_Product_Variable  $product   Parent product.
+ * @param WC_Product_Variation $variation Variation product.
+ * @return array
+ */
+function almasland_available_variation_price_html( $data, $product, $variation ) {
+	unset( $product );
+	$data['almas_price_html'] = almasland_get_buy_price_html( $variation );
+	return $data;
+}
+add_filter( 'woocommerce_available_variation', 'almasland_available_variation_price_html', 10, 3 );
 
 /**
  * Product category list as plain text.

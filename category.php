@@ -1,18 +1,17 @@
 <?php
 /**
- * Blog index template.
+ * Category archive template.
  *
  * @package AlmasLand
  */
 
 get_header();
 
-$blog_title = get_the_title( (int) get_option( 'page_for_posts' ) );
-if ( ! $blog_title ) {
-	$blog_title = __( 'مقالات', 'almas-land' );
-}
+$term        = get_queried_object();
+$title       = ( $term && ! is_wp_error( $term ) ) ? $term->name : wp_strip_all_tags( get_the_archive_title() );
+$description = ( $term && ! empty( $term->description ) ) ? term_description() : get_the_archive_description();
 ?>
-<main class="blog-page">
+<main class="blog-page blog-page--category">
 	<div class="container">
 		<?php almasland_breadcrumb(); ?>
 
@@ -21,15 +20,15 @@ if ( ! $blog_title ) {
 			'template-parts/blog/hero',
 			null,
 			array(
-				'title'       => $blog_title,
-				'description' => '',
+				'title'       => $title,
+				'description' => $description,
 				'show_chips'  => true,
 			)
 		);
 		?>
 
 		<div class="blog-layout">
-			<section class="blog-main" aria-label="<?php esc_attr_e( 'فهرست مقالات', 'almas-land' ); ?>">
+			<section class="blog-main" aria-label="<?php esc_attr_e( 'مقالات این دسته', 'almas-land' ); ?>">
 				<?php if ( have_posts() ) : ?>
 					<?php
 					$show_featured = ! is_paged();
