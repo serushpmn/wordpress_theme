@@ -1044,15 +1044,30 @@ function almasland_get_home_special_offers_products( $limit = 12 ) {
 		return array();
 	}
 
-	$limit    = max( 1, (int) $limit );
+	$limit = max( 1, (int) $limit );
+
+	// wc_get_products() has no `on_sale` arg — use sale IDs (parents only; skip variations).
+	$sale_ids = array_values(
+		array_filter(
+			array_map( 'absint', wc_get_product_ids_on_sale() ),
+			static function ( $id ) {
+				return $id > 0 && 'product' === get_post_type( $id );
+			}
+		)
+	);
+
+	if ( empty( $sale_ids ) ) {
+		return array();
+	}
+
 	$products = wc_get_products(
 		array(
-			'limit'    => $limit,
-			'status'   => 'publish',
-			'on_sale'  => true,
-			'orderby'  => 'date',
-			'order'    => 'DESC',
-			'return'   => 'objects',
+			'limit'   => $limit,
+			'status'  => 'publish',
+			'include' => $sale_ids,
+			'orderby' => 'date',
+			'order'   => 'DESC',
+			'return'  => 'objects',
 		)
 	);
 

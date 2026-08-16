@@ -447,7 +447,6 @@ main {
 .filter-open svg {
   width: 20px;
   height: 20px;
-  fill: currentColor;
 }
 
 .icon-button:hover {

@@ -1053,7 +1053,7 @@ function initFrontPageSpecialOffersSwiper() {
     observeParents: false,
     resizeObserver: false,
     updateOnWindowResize: true,
-    slidesPerView: 1.12,
+    slidesPerView: 2,
     spaceBetween: 12,
     watchOverflow: true,
     navigation: {
