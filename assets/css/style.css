@@ -10393,3 +10393,46 @@ p.no-comments {
 [data-theme="dark"] .order-received__trust span {
   background: rgba(36, 87, 214, 0.16);
 }
+
+/* Page-loading indicator (internal link clicks) */
+html.is-page-loading::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 2147483000;
+  pointer-events: none;
+  background: color-mix(in srgb, var(--color-bg, #fff) 72%, transparent);
+}
+
+html.is-page-loading::after {
+  content: "";
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  z-index: 2147483001;
+  width: 40px;
+  height: 40px;
+  margin: -20px 0 0 -20px;
+  border: 3px solid color-mix(in srgb, var(--color-primary, #e11d48) 22%, transparent);
+  border-top-color: var(--color-primary, #e11d48);
+  border-radius: 50%;
+  pointer-events: none;
+  box-shadow: 0 8px 28px rgba(15, 23, 42, 0.12);
+  animation: almas-page-spinner 0.7s linear infinite;
+}
+
+@keyframes almas-page-spinner {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html.is-page-loading::after {
+    animation: none;
+    border-top-color: color-mix(in srgb, var(--color-primary, #e11d48) 22%, transparent);
+    border-color: var(--color-primary, #e11d48);
+    opacity: 0.85;
+  }
+}
+

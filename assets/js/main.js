@@ -1189,3 +1189,129 @@ initFrontPageOfferCartButtons();
 initFrontPageSpecialOffersSwiper();
 initFrontPageCatalogFilters();
 
+/* Lightweight page-loading indicator for internal navigations */
+(function initPageLoadingIndicator() {
+  let navigating = false;
+
+  function isSkippableLink(link) {
+    if (!(link instanceof HTMLAnchorElement)) {
+      return true;
+    }
+
+    if (link.hasAttribute("download")) {
+      return true;
+    }
+
+    const target = (link.getAttribute("target") || "").toLowerCase();
+    if (target && target !== "_self") {
+      return true;
+    }
+
+    const rawHref = (link.getAttribute("href") || "").trim();
+    if (!rawHref || rawHref.charAt(0) === "#") {
+      return true;
+    }
+
+    const protocol = rawHref.slice(0, rawHref.indexOf(":") + 1).toLowerCase();
+    if (
+      protocol === "mailto:" ||
+      protocol === "tel:" ||
+      protocol === "javascript:" ||
+      protocol === "data:" ||
+      protocol === "sms:" ||
+      protocol === "whatsapp:"
+    ) {
+      return true;
+    }
+
+    if (
+      link.classList.contains("ajax_add_to_cart") ||
+      link.classList.contains("add_to_cart_button") ||
+      link.classList.contains("remove_from_cart_button") ||
+      link.classList.contains("remove") ||
+      link.hasAttribute("data-add-to-cart") ||
+      link.hasAttribute("data-mobile-add-to-cart")
+    ) {
+      return true;
+    }
+
+    if (link.hasAttribute("data-product_id") && link.classList.contains("button")) {
+      return true;
+    }
+
+    let url;
+    try {
+      url = new URL(rawHref, window.location.href);
+    } catch {
+      return true;
+    }
+
+    if (url.origin !== window.location.origin) {
+      return true;
+    }
+
+    const path = url.pathname.toLowerCase();
+    if (path.indexOf("/wp-admin") !== -1 || path.indexOf("/wp-login.php") !== -1) {
+      return true;
+    }
+
+    if (
+      url.searchParams.get("action") === "logout" ||
+      url.href.indexOf("customer-logout") !== -1 ||
+      url.href.indexOf("wp-logout") !== -1
+    ) {
+      return true;
+    }
+
+    if (
+      url.pathname === window.location.pathname &&
+      url.search === window.location.search &&
+      url.hash !== ""
+    ) {
+      return true;
+    }
+
+    return false;
+  }
+
+  function isNavClick(event) {
+    return (
+      event.button === 0 &&
+      !event.defaultPrevented &&
+      !event.metaKey &&
+      !event.ctrlKey &&
+      !event.shiftKey &&
+      !event.altKey
+    );
+  }
+
+  document.addEventListener("click", (event) => {
+    if (!isNavClick(event)) {
+      return;
+    }
+
+    const link = event.target.closest?.("a[href]");
+    if (!link || isSkippableLink(link)) {
+      return;
+    }
+
+    if (navigating) {
+      event.preventDefault();
+      return;
+    }
+
+    queueMicrotask(() => {
+      if (event.defaultPrevented || navigating) {
+        return;
+      }
+      navigating = true;
+      document.documentElement.classList.add("is-page-loading");
+    });
+  });
+
+  window.addEventListener("pageshow", () => {
+    navigating = false;
+    document.documentElement.classList.remove("is-page-loading");
+  });
+})();
+
