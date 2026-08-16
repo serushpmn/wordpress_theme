@@ -54,6 +54,7 @@ if ( ! $is_variable && WC()->cart ) {
 
 $price_html      = $product->get_price_html();
 $buy_price_html = function_exists( 'almasland_get_buy_price_html' ) ? almasland_get_buy_price_html( $product ) : $price_html;
+$show_price     = $buy_price_html !== '';
 ?>
 <article id="product-<?php the_ID(); ?>" <?php wc_product_class( $is_variable ? 'product--variable' : '', $product ); ?>>
 	<?php almasland_breadcrumb(); ?>
@@ -260,6 +261,7 @@ $buy_price_html = function_exists( 'almasland_get_buy_price_html' ) ? almasland_
 				<?php woocommerce_template_single_add_to_cart(); ?>
 			<?php endif; ?>
 
+			<?php if ( $show_price ) : ?>
 			<div
 				class="buy-card__price"
 				data-buy-price
@@ -274,12 +276,14 @@ $buy_price_html = function_exists( 'almasland_get_buy_price_html' ) ? almasland_
 					<?php echo $buy_price_html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
 				<?php endif; ?>
 			</div>
+			<?php endif; ?>
 	</aside>
 </section>
 	<?php do_action( 'woocommerce_after_single_product_summary' ); ?>
 </article>
 
 <div class="mobile-buy-bar" aria-label="<?php esc_attr_e( 'خرید سریع محصول', 'almas-land' ); ?>">
+	<?php if ( $show_price ) : ?>
 	<div class="mobile-buy-bar__price" data-mobile-buy-price>
 		<?php if ( $is_variable ) : ?>
 			<div class="buy-card__price-default" data-price-default-html>
@@ -290,6 +294,7 @@ $buy_price_html = function_exists( 'almasland_get_buy_price_html' ) ? almasland_
 			<?php echo $buy_price_html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
 		<?php endif; ?>
 	</div>
+	<?php endif; ?>
 	<?php if ( $is_in_cart ) : ?>
 		<a class="btn btn--primary" href="<?php echo esc_url( wc_get_cart_url() ); ?>"><?php esc_html_e( 'مشاهده سبد خرید', 'almas-land' ); ?></a>
 	<?php else : ?>

@@ -9,7 +9,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'ALMASLAND_VERSION', '1.0.0' );
+define( 'ALMASLAND_VERSION', '1.0.3' );
 define( 'ALMASLAND_DIR', get_template_directory() );
 define( 'ALMASLAND_URI', get_template_directory_uri() );
 
@@ -166,27 +166,9 @@ function almasland_enqueue_assets() {
 		)
 	);
 
-	$primary   = sanitize_hex_color( almasland_get_panel( 'identity', 'primary_color', almasland_get_option( 'primary_color', '#ff3f5f' ) ) );
-	$secondary = sanitize_hex_color( almasland_get_panel( 'identity', 'secondary_color', almasland_get_option( 'secondary_color', '#2457d6' ) ) );
-	$button    = sanitize_hex_color( almasland_get_panel( 'identity', 'button_color', '' ) );
-	$link      = sanitize_hex_color( almasland_get_panel( 'identity', 'link_color', '' ) );
-	$custom    = function_exists( 'almasland_sanitize_custom_css' ) ? almasland_sanitize_custom_css( almasland_get_panel( 'identity', 'custom_css', '' ) ) : '';
-	$inline    = '';
+	$custom = function_exists( 'almasland_sanitize_custom_css' ) ? almasland_sanitize_custom_css( almasland_get_panel( 'identity', 'custom_css', '' ) ) : '';
+	$inline = function_exists( 'almasland_get_theme_color_css' ) ? almasland_get_theme_color_css() : '';
 
-	if ( $primary ) {
-		$inline .= ':root{--color-primary:' . $primary . ';--color-primary-dark:' . $primary . ';}';
-	}
-	if ( $secondary ) {
-		$inline .= ':root{--color-secondary:' . $secondary . ';}';
-	}
-	if ( $button ) {
-		$inline .= ':root{--color-button:' . $button . ';}';
-		$inline .= '.btn--primary{background-color:' . $button . ';border-color:' . $button . ';}';
-	}
-	if ( $link ) {
-		$inline .= ':root{--color-link:' . $link . ';}';
-		$inline .= 'a{color:' . $link . ';}';
-	}
 	if ( $custom ) {
 		$inline .= $custom;
 	}

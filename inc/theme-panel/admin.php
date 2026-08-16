@@ -195,10 +195,11 @@ function almasland_panel_render_identity() {
 	almasland_panel_field_image( 'almasland_panel[identity][favicon]', __( 'فاوآیکون', 'almas-land' ), $s['favicon'] );
 	almasland_panel_card_close();
 	almasland_panel_card_open( __( 'رنگ‌ها', 'almas-land' ) );
-	almasland_panel_field_color( 'almasland_panel[identity][primary_color]', __( 'رنگ اصلی', 'almas-land' ), $s['primary_color'] );
-	almasland_panel_field_color( 'almasland_panel[identity][secondary_color]', __( 'رنگ دوم', 'almas-land' ), $s['secondary_color'] );
-	almasland_panel_field_color( 'almasland_panel[identity][button_color]', __( 'رنگ دکمه‌ها', 'almas-land' ), $s['button_color'] );
-	almasland_panel_field_color( 'almasland_panel[identity][link_color]', __( 'رنگ لینک‌ها', 'almas-land' ), $s['link_color'] );
+	echo '<p class="description">' . esc_html__( 'این رنگ‌ها در کل قالب به‌صورت داینامیک اعمال می‌شوند. Primary جایگزین بنفش‌های قبلی شده است.', 'almas-land' ) . '</p>';
+	almasland_panel_field_color( 'almasland_panel[identity][primary_color]', __( 'رنگ اصلی (Primary)', 'almas-land' ), $s['primary_color'] );
+	almasland_panel_field_color( 'almasland_panel[identity][secondary_color]', __( 'رنگ دوم (Secondary)', 'almas-land' ), $s['secondary_color'] );
+	almasland_panel_field_color( 'almasland_panel[identity][button_color]', __( 'رنگ دکمه‌ها (Button)', 'almas-land' ), $s['button_color'] );
+	almasland_panel_field_color( 'almasland_panel[identity][link_color]', __( 'رنگ لینک‌ها (Link)', 'almas-land' ), $s['link_color'] );
 	almasland_panel_card_close();
 	almasland_panel_card_open( __( 'CSS سفارشی', 'almas-land' ) );
 	almasland_panel_field_textarea( 'almasland_panel[identity][custom_css]', __( 'کد CSS', 'almas-land' ), $s['custom_css'], 8 );

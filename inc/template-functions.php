@@ -38,6 +38,109 @@ function almasland_get_option( $key, $default = '' ) {
 }
 
 /**
+ * Parse a hex color into RGB components.
+ *
+ * @param string $hex Hex color.
+ * @return array{0:int,1:int,2:int}|null
+ */
+function almasland_hex_to_rgb( $hex ) {
+	$hex = ltrim( (string) $hex, '#' );
+	if ( 3 === strlen( $hex ) ) {
+		$hex = $hex[0] . $hex[0] . $hex[1] . $hex[1] . $hex[2] . $hex[2];
+	}
+	if ( ! preg_match( '/^[0-9a-fA-F]{6}$/', $hex ) ) {
+		return null;
+	}
+
+	return array(
+		hexdec( substr( $hex, 0, 2 ) ),
+		hexdec( substr( $hex, 2, 2 ) ),
+		hexdec( substr( $hex, 4, 2 ) ),
+	);
+}
+
+/**
+ * Darken a hex color by a percentage.
+ *
+ * @param string $hex     Hex color.
+ * @param int    $percent Percent to darken (0–100).
+ * @return string
+ */
+function almasland_darken_hex( $hex, $percent = 14 ) {
+	$rgb = almasland_hex_to_rgb( $hex );
+	if ( ! $rgb ) {
+		return $hex;
+	}
+
+	$factor = max( 0, min( 1, 1 - ( (int) $percent / 100 ) ) );
+
+	return sprintf(
+		'#%02x%02x%02x',
+		(int) round( $rgb[0] * $factor ),
+		(int) round( $rgb[1] * $factor ),
+		(int) round( $rgb[2] * $factor )
+	);
+}
+
+/**
+ * Build :root CSS custom properties from theme panel colors.
+ * Only variables — no element rules (keeps footer / dark mode intact).
+ *
+ * @return string
+ */
+function almasland_get_theme_color_css() {
+	$primary      = sanitize_hex_color( almasland_get_panel( 'identity', 'primary_color', almasland_get_option( 'primary_color', '#ff3f5f' ) ) ) ?: '#ff3f5f';
+	$secondary    = sanitize_hex_color( almasland_get_panel( 'identity', 'secondary_color', almasland_get_option( 'secondary_color', '#2457d6' ) ) ) ?: '#2457d6';
+	$button       = sanitize_hex_color( almasland_get_panel( 'identity', 'button_color', '' ) ) ?: $primary;
+	$link         = sanitize_hex_color( almasland_get_panel( 'identity', 'link_color', '' ) ) ?: $secondary;
+	$primary_dark = almasland_darken_hex( $primary, 14 );
+	$button_dark  = almasland_darken_hex( $button, 14 );
+	$rgb          = almasland_hex_to_rgb( $primary );
+	$rgb_csv      = $rgb ? implode( ', ', $rgb ) : '255, 63, 95';
+
+	$brand_vars = array(
+		'--color-primary'            => $primary,
+		'--color-primary-dark'       => $primary_dark,
+		'--color-primary-rgb'        => $rgb_csv,
+		'--color-shadow-primary-rgb' => $rgb_csv,
+		'--color-secondary'          => $secondary,
+		'--color-button'             => $button,
+		'--color-button-dark'        => $button_dark,
+		'--color-link'               => $link,
+		'--color-promo-start'        => $primary_dark,
+		'--color-promo-end'          => $primary,
+		'--header-accent'            => $primary,
+		'--footer-accent'            => $primary,
+		'--offers-accent'            => $primary,
+		'--catalog-accent'           => $primary,
+		'--category-accent'          => $primary,
+		'--trust-accent'             => $primary,
+		'--why-accent'               => $primary,
+		'--features-accent'          => $primary,
+		'--checkout-trust-accent'    => $primary,
+	);
+
+	$light_only = array(
+		'--color-primary-soft' => 'color-mix(in srgb, ' . $primary . ' 14%, #ffffff)',
+	);
+
+	$dark_only = array(
+		'--color-primary-soft' => 'color-mix(in srgb, ' . $primary . ' 22%, #101827)',
+	);
+
+	$build = static function ( array $vars ) {
+		$css = '';
+		foreach ( $vars as $name => $value ) {
+			$css .= $name . ':' . $value . ';';
+		}
+		return $css;
+	};
+
+	return ':root{' . $build( array_merge( $brand_vars, $light_only ) ) . '}'
+		. '[data-theme="dark"]{' . $build( array_merge( $brand_vars, $dark_only ) ) . '}';
+}
+
+/**
  * Whether the notification bar should display.
  *
  * @return bool
@@ -954,6 +1057,76 @@ function almasland_format_plain_price( $amount ) {
 }
 
 /**
+ * Compact تومان currency icon markup for product cards.
+ *
+ * @return string
+ */
+function almasland_get_toman_icon_html() {
+	return '<span class="almasland-toman-icon" aria-hidden="true"><span class="almasland-toman-icon__top">تو</span><span class="almasland-toman-icon__bottom">مان</span></span><span class="screen-reader-text">تومان</span>';
+}
+
+/**
+ * Card price amount + تومان icon.
+ *
+ * @param float|string $amount Raw amount.
+ * @return string
+ */
+function almasland_format_card_price_html( $amount ) {
+	$formatted = almasland_format_plain_price( $amount );
+	if ( '' === $formatted ) {
+		return '';
+	}
+
+	return '<span class="almasland-card-price__amount">' . esc_html( $formatted ) . '</span>' . almasland_get_toman_icon_html();
+}
+
+/**
+ * Whether product price should be shown on storefront.
+ *
+ * @param WC_Product|null $product Product.
+ * @return bool
+ */
+function almasland_should_show_product_price( $product ) {
+	return $product instanceof WC_Product && $product->is_in_stock();
+}
+
+/**
+ * CTA label for product cards.
+ *
+ * @param WC_Product $product Product.
+ * @return string
+ */
+function almasland_get_product_card_cta_label( $product ) {
+	if ( ! $product instanceof WC_Product ) {
+		return __( 'مشاهده', 'almas-land' );
+	}
+
+	return $product->is_in_stock() ? __( 'مشاهده و خرید', 'almas-land' ) : __( 'مشاهده', 'almas-land' );
+}
+
+/**
+ * Stock label for product cards.
+ *
+ * @param WC_Product $product Product.
+ * @return string
+ */
+function almasland_get_product_card_stock_label( $product ) {
+	if ( ! $product instanceof WC_Product ) {
+		return '';
+	}
+
+	if ( ! $product->is_in_stock() ) {
+		return __( 'ناموجود', 'almas-land' );
+	}
+
+	if ( $product->is_on_backorder() ) {
+		return __( 'قابل پیش‌سفارش', 'almas-land' );
+	}
+
+	return __( 'موجود', 'almas-land' );
+}
+
+/**
  * Whether a product belongs to the used / second-hand category.
  *
  * @param WC_Product|null $product Product.
@@ -1221,13 +1394,15 @@ function almasland_get_home_catalog_card_html( $product ) {
 
 	$product_link  = $product->get_permalink();
 	$summary       = almasland_get_product_card_summary( $product );
-	$grade         = almasland_get_product_grade_badge( $product );
+	$is_used       = almasland_is_used_product( $product );
+	$grade         = $is_used ? almasland_get_product_grade_badge( $product ) : null;
 	$sale_price    = (float) $product->get_price();
 	$regular_price = (float) $product->get_regular_price();
-	$is_used       = almasland_is_used_product( $product );
+	$stock_label   = almasland_get_product_card_stock_label( $product );
+	$stock_class   = function_exists( 'almasland_stock_class' ) ? almasland_stock_class( $product ) : '';
+	$cta_label     = almasland_get_product_card_cta_label( $product );
 	$grade_style   = '';
-	$card_class    = 'front-page-catalog-card' . ( $is_used ? ' front-page-catalog-card--used' : '' );
-	$cta_label     = $product->is_in_stock() ? __( 'مشاهده و خرید', 'almas-land' ) : __( 'ناموجود', 'almas-land' );
+	$card_class    = 'front-page-catalog-card front-page-catalog-card--storefront' . ( $is_used ? ' front-page-catalog-card--used' : '' );
 
 	if ( $grade && ! empty( $grade['bg'] ) ) {
 		$grade_style = sprintf(
@@ -1255,15 +1430,18 @@ function almasland_get_home_catalog_card_html( $product ) {
 			<?php if ( $summary ) : ?>
 				<span class="front-page-catalog-card__specs"><?php echo esc_html( $summary ); ?></span>
 			<?php endif; ?>
-			<span class="front-page-catalog-card__prices">
-				<?php if ( $sale_price > 0 ) : ?>
-					<span class="front-page-catalog-card__price"><?php echo esc_html( almasland_format_plain_price( $sale_price ) ); ?></span>
-				<?php endif; ?>
-				<?php if ( $regular_price > 0 && $regular_price > $sale_price ) : ?>
-					<span class="front-page-catalog-card__price-regular"><del><?php echo esc_html( almasland_format_plain_price( $regular_price ) ); ?></del></span>
-				<?php endif; ?>
-			</span>
-			<a class="front-page-catalog-card__cta" href="<?php echo esc_url( $product_link ); ?>">
+			<span class="front-page-catalog-card__stock stock <?php echo esc_attr( $stock_class ); ?>"><?php echo esc_html( $stock_label ); ?></span>
+			<?php if ( almasland_should_show_product_price( $product ) ) : ?>
+				<span class="front-page-catalog-card__prices">
+					<?php if ( $sale_price > 0 ) : ?>
+						<span class="front-page-catalog-card__price"><?php echo wp_kses_post( almasland_format_card_price_html( $sale_price ) ); ?></span>
+					<?php endif; ?>
+					<?php if ( $regular_price > 0 && $regular_price > $sale_price ) : ?>
+						<span class="front-page-catalog-card__price-regular"><del><?php echo esc_html( almasland_format_plain_price( $regular_price ) ); ?></del><?php echo wp_kses_post( almasland_get_toman_icon_html() ); ?></span>
+					<?php endif; ?>
+				</span>
+			<?php endif; ?>
+			<a class="front-page-catalog-card__cta<?php echo $product->is_in_stock() ? '' : ' front-page-catalog-card__cta--view'; ?>" href="<?php echo esc_url( $product_link ); ?>">
 				<?php echo esc_html( $cta_label ); ?>
 			</a>
 		</div>

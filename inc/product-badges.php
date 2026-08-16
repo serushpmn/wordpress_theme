@@ -18,7 +18,7 @@ function almasland_get_fixed_badge_definitions() {
 	return array(
 		'check'              => array(
 			'text'  => 'قابل خرید بصورت چک',
-			'bg'    => '#7c3aed',
+			'bg'    => '#ff3f5f',
 			'color' => '#ffffff',
 		),
 		'installment'        => array(
@@ -58,7 +58,7 @@ function almasland_get_fixed_badge_definitions() {
 		),
 		'open_box'           => array(
 			'text'  => 'نمونه ویترینی (اوپن باکس)',
-			'bg'    => '#8b5cf6',
+			'bg'    => '#fb7185',
 			'color' => '#ffffff',
 		),
 		'second_hand'        => array(

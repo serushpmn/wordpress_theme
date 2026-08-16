@@ -711,6 +711,10 @@ function almasland_get_buy_price_html( $product ) {
 		return '';
 	}
 
+	if ( ! $product->is_in_stock() ) {
+		return '';
+	}
+
 	$from_label = '';
 	$current    = 0.0;
 	$regular    = 0.0;
@@ -774,9 +778,27 @@ function almasland_get_buy_price_html( $product ) {
 function almasland_available_variation_price_html( $data, $product, $variation ) {
 	unset( $product );
 	$data['almas_price_html'] = almasland_get_buy_price_html( $variation );
+	if ( $variation && ! $variation->is_in_stock() ) {
+		$data['price_html'] = '';
+	}
 	return $data;
 }
 add_filter( 'woocommerce_available_variation', 'almasland_available_variation_price_html', 10, 3 );
+
+/**
+ * Hide price HTML for out-of-stock products site-wide.
+ *
+ * @param string     $price_html Price HTML.
+ * @param WC_Product $product    Product.
+ * @return string
+ */
+function almasland_hide_outofstock_price_html( $price_html, $product ) {
+	if ( $product instanceof WC_Product && ! $product->is_in_stock() ) {
+		return '';
+	}
+	return $price_html;
+}
+add_filter( 'woocommerce_get_price_html', 'almasland_hide_outofstock_price_html', 20, 2 );
 
 /**
  * Product category list as plain text.

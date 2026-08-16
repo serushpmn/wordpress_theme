@@ -41,9 +41,13 @@ $view_all_url = add_query_arg( 'on_sale', '1', wc_get_page_permalink( 'shop' ) )
 				$product_link     = $product->get_permalink();
 				$discount_percent = almasland_get_discount_percent( $product );
 				$summary          = almasland_get_product_card_summary( $product );
-				$grade            = almasland_get_product_grade_badge( $product );
+				$is_used          = almasland_is_used_product( $product );
+				$grade            = $is_used ? almasland_get_product_grade_badge( $product ) : null;
 				$regular_price    = (float) $product->get_regular_price();
 				$sale_price       = (float) $product->get_price();
+				$stock_label      = almasland_get_product_card_stock_label( $product );
+				$stock_class      = almasland_stock_class( $product );
+				$cta_label        = almasland_get_product_card_cta_label( $product );
 				$grade_style      = '';
 
 				if ( $grade && ! empty( $grade['bg'] ) ) {
@@ -54,7 +58,7 @@ $view_all_url = add_query_arg( 'on_sale', '1', wc_get_page_permalink( 'shop' ) )
 					);
 				}
 				?>
-				<article class="front-page-offer-card swiper-slide">
+				<article class="front-page-offer-card swiper-slide<?php echo $is_used ? ' front-page-offer-card--used' : ''; ?>">
 					<button class="front-page-offer-card__wishlist" type="button" aria-label="<?php esc_attr_e( 'افزودن به علاقه‌مندی‌ها', 'almas-land' ); ?>">
 						<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20.4 10.8 19C6.4 15.1 3.5 12.5 3.5 9.2A4.4 4.4 0 0 1 8 4.8c1.5 0 2.9.7 4 1.8a5.4 5.4 0 0 1 4-1.8 4.4 4.4 0 0 1 4.5 4.4c0 3.3-2.9 5.9-7.3 9.8L12 20.4Z" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>
 					</button>
@@ -92,20 +96,25 @@ $view_all_url = add_query_arg( 'on_sale', '1', wc_get_page_permalink( 'shop' ) )
 							<p class="front-page-offer-card__specs"><?php echo esc_html( $summary ); ?></p>
 						<?php endif; ?>
 
-						<div class="front-page-offer-card__prices">
-							<?php if ( $sale_price > 0 ) : ?>
-								<span class="front-page-offer-card__price"><?php echo esc_html( almasland_format_plain_price( $sale_price ) ); ?></span>
-							<?php endif; ?>
+						<span class="front-page-offer-card__stock stock <?php echo esc_attr( $stock_class ); ?>"><?php echo esc_html( $stock_label ); ?></span>
 
-							<?php if ( $regular_price > 0 && $regular_price > $sale_price ) : ?>
-								<span class="front-page-offer-card__price-regular">
-									<del><?php echo esc_html( almasland_format_plain_price( $regular_price ) ); ?></del>
-								</span>
-							<?php endif; ?>
-						</div>
+						<?php if ( almasland_should_show_product_price( $product ) ) : ?>
+							<div class="front-page-offer-card__prices">
+								<?php if ( $sale_price > 0 ) : ?>
+									<span class="front-page-offer-card__price"><?php echo wp_kses_post( almasland_format_card_price_html( $sale_price ) ); ?></span>
+								<?php endif; ?>
 
-						<a class="front-page-offer-card__cart front-page-offer-card__cart--link" href="<?php echo esc_url( $product_link ); ?>">
-							<?php echo esc_html( $product->is_in_stock() ? __( 'مشاهده و خرید', 'almas-land' ) : __( 'ناموجود', 'almas-land' ) ); ?>
+								<?php if ( $regular_price > 0 && $regular_price > $sale_price ) : ?>
+									<span class="front-page-offer-card__price-regular">
+										<del><?php echo esc_html( almasland_format_plain_price( $regular_price ) ); ?></del>
+										<?php echo wp_kses_post( almasland_get_toman_icon_html() ); ?>
+									</span>
+								<?php endif; ?>
+							</div>
+						<?php endif; ?>
+
+						<a class="front-page-offer-card__cart front-page-offer-card__cart--link<?php echo $product->is_in_stock() ? '' : ' front-page-offer-card__cart--view'; ?>" href="<?php echo esc_url( $product_link ); ?>">
+							<?php echo esc_html( $cta_label ); ?>
 						</a>
 					</div>
 				</article>
