@@ -198,7 +198,7 @@ add_filter( 'woocommerce_add_to_cart_fragments', 'almasland_cart_fragments' );
  * @return int
  */
 function almasland_loop_columns() {
-	return 3;
+	return 4;
 }
 add_filter( 'loop_shop_columns', 'almasland_loop_columns' );
 

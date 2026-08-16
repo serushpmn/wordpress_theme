@@ -28,10 +28,15 @@ $stock_label  = function_exists( 'almasland_get_product_card_stock_label' ) ? al
 $stock_class  = function_exists( 'almasland_stock_class' ) ? almasland_stock_class( $product ) : '';
 $summary      = function_exists( 'almasland_get_product_card_summary' ) ? almasland_get_product_card_summary( $product ) : '';
 $grade        = $is_used && function_exists( 'almasland_get_product_grade_badge' ) ? almasland_get_product_grade_badge( $product ) : null;
-$cta_label    = function_exists( 'almasland_get_product_card_cta_label' ) ? almasland_get_product_card_cta_label( $product ) : __( 'مشاهده و خرید', 'almas-land' );
+$cta_label    = function_exists( 'almasland_get_product_card_cta_label' ) ? almasland_get_product_card_cta_label( $product ) : __( 'مشاهده محصول', 'almas-land' );
+$rating       = (float) $product->get_average_rating();
 $sale_price   = (float) $product->get_price();
 $regular      = (float) $product->get_regular_price();
 $grade_style  = '';
+
+if ( is_shop() || is_product_taxonomy() ) {
+	$cta_label = __( 'مشاهده محصول', 'almas-land' );
+}
 
 if ( $grade && ! empty( $grade['bg'] ) ) {
 	$grade_style = sprintf(
@@ -63,16 +68,25 @@ if ( $grade && ! empty( $grade['bg'] ) ) {
 
 		<span class="product-card__stock stock <?php echo esc_attr( $stock_class ); ?>"><?php echo esc_html( $stock_label ); ?></span>
 
-		<?php if ( almasland_should_show_product_price( $product ) ) : ?>
-			<div class="product-card__prices">
-				<?php if ( $sale_price > 0 ) : ?>
-					<span class="product-card__price"><?php echo wp_kses_post( almasland_format_card_price_html( $sale_price ) ); ?></span>
-				<?php endif; ?>
-				<?php if ( $regular > 0 && $regular > $sale_price ) : ?>
-					<span class="product-card__price-regular"><del><?php echo esc_html( almasland_format_plain_price( $regular ) ); ?></del></span>
-				<?php endif; ?>
-			</div>
-		<?php endif; ?>
+		<div class="product-card__meta">
+			<?php if ( $rating > 0 ) : ?>
+				<span class="product-card__rating" aria-label="<?php echo esc_attr( sprintf( __( 'امتیاز %s از ۵', 'almas-land' ), almasland_persian_digits( number_format_i18n( $rating, 1 ) ) ) ); ?>">
+					<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3.6 2.7 5.5 6 .9-4.4 4.2 1 6-5.3-2.8-5.3 2.8 1-6L3.3 10l6-.9L12 3.6Z" fill="currentColor"/></svg>
+					<?php echo esc_html( almasland_persian_digits( number_format_i18n( $rating, 1 ) ) ); ?>
+				</span>
+			<?php endif; ?>
+
+			<?php if ( almasland_should_show_product_price( $product ) ) : ?>
+				<div class="product-card__prices">
+					<?php if ( $sale_price > 0 ) : ?>
+						<span class="product-card__price"><?php echo wp_kses_post( almasland_format_card_price_html( $sale_price ) ); ?></span>
+					<?php endif; ?>
+					<?php if ( $regular > 0 && $regular > $sale_price ) : ?>
+						<span class="product-card__price-regular"><del><?php echo esc_html( almasland_format_plain_price( $regular ) ); ?></del></span>
+					<?php endif; ?>
+				</div>
+			<?php endif; ?>
+		</div>
 
 		<a class="product-card__cta<?php echo $product->is_in_stock() ? '' : ' product-card__cta--view'; ?>" href="<?php echo esc_url( $product_link ); ?>">
 			<?php echo esc_html( $cta_label ); ?>

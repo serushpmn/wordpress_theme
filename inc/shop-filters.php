@@ -35,12 +35,16 @@ function almasland_get_shop_sort_options() {
 			'label'   => __( 'جدیدترین', 'almas-land' ),
 			'orderby' => 'date',
 		),
+		'modified'   => array(
+			'label'   => __( 'بروزترین‌ها', 'almas-land' ),
+			'orderby' => 'modified',
+		),
 		'popularity' => array(
 			'label'   => __( 'پرفروش‌ترین', 'almas-land' ),
 			'orderby' => 'popularity',
 		),
 		'rating'     => array(
-			'label'   => __( 'محبوب‌ترین', 'almas-land' ),
+			'label'   => __( 'پربازدیدترین', 'almas-land' ),
 			'orderby' => 'rating',
 		),
 		'price'      => array(
@@ -50,10 +54,6 @@ function almasland_get_shop_sort_options() {
 		'price-desc' => array(
 			'label'   => __( 'گران‌ترین', 'almas-land' ),
 			'orderby' => 'price-desc',
-		),
-		'title'      => array(
-			'label'   => __( 'الفبایی', 'almas-land' ),
-			'orderby' => 'title',
 		),
 	);
 }
@@ -312,10 +312,10 @@ function almasland_apply_shop_filters( $query ) {
 	$meta_query = is_array( $meta_query ) ? $meta_query : array();
 	$tax_query  = is_array( $tax_query ) ? $tax_query : array();
 
-	// Alphabetical sort is not a native WooCommerce orderby key.
-	if ( 'title' === $state['orderby'] ) {
-		$query->set( 'orderby', 'title' );
-		$query->set( 'order', 'ASC' );
+	// Custom orderby keys WooCommerce does not map natively.
+	if ( 'modified' === $state['orderby'] ) {
+		$query->set( 'orderby', 'modified' );
+		$query->set( 'order', 'DESC' );
 		$query->set( 'meta_key', '' );
 	}
 
@@ -541,7 +541,10 @@ function almasland_shop_sort_bar() {
 	$active_key = $state['orderby'];
 	?>
 	<div class="shop-sort-bar" role="toolbar" aria-label="<?php esc_attr_e( 'مرتب‌سازی محصولات', 'almas-land' ); ?>">
-		<span class="shop-sort-bar__label"><?php esc_html_e( 'مرتب‌سازی:', 'almas-land' ); ?></span>
+		<span class="shop-sort-bar__label">
+			<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16v2H4V7Zm2 4h12v2H6v-2Zm3 4h6v2H9v-2Z" fill="currentColor"/></svg>
+			<?php esc_html_e( 'مرتب‌سازی', 'almas-land' ); ?>
+		</span>
 		<div class="shop-sort-bar__options">
 			<?php foreach ( $options as $key => $option ) : ?>
 				<?php
@@ -557,6 +560,129 @@ function almasland_shop_sort_bar() {
 		</div>
 	</div>
 	<?php
+}
+
+/**
+ * Categories for the archive top navigation strip.
+ *
+ * @return WP_Term[]
+ */
+function almasland_get_shop_nav_categories() {
+	if ( ! taxonomy_exists( 'product_cat' ) ) {
+		return array();
+	}
+
+	$exclude = array_filter( array( (int) get_option( 'default_product_cat', 0 ) ) );
+	$terms   = get_terms(
+		array(
+			'taxonomy'   => 'product_cat',
+			'parent'     => 0,
+			'hide_empty' => true,
+			'exclude'    => $exclude,
+			'orderby'    => 'name',
+			'order'      => 'ASC',
+		)
+	);
+
+	return is_wp_error( $terms ) ? array() : $terms;
+}
+
+/**
+ * Whether a category nav item should be marked active.
+ *
+ * @param WP_Term $term Category term.
+ * @return bool
+ */
+function almasland_is_shop_nav_category_active( $term ) {
+	if ( ! $term instanceof WP_Term || ! is_product_category() ) {
+		return false;
+	}
+
+	$current = get_queried_object();
+	if ( ! $current || is_wp_error( $current ) || empty( $current->term_id ) ) {
+		return false;
+	}
+
+	$current_id = (int) $current->term_id;
+	$term_id    = (int) $term->term_id;
+
+	if ( $current_id === $term_id ) {
+		return true;
+	}
+
+	return term_is_ancestor_of( $term_id, $current_id, 'product_cat' );
+}
+
+/**
+ * Render archive category navigation strip.
+ */
+function almasland_shop_category_nav() {
+	$terms = almasland_get_shop_nav_categories();
+	if ( ! $terms ) {
+		return;
+	}
+	?>
+	<nav class="shop-cat-nav" aria-label="<?php esc_attr_e( 'دسته‌بندی محصولات', 'almas-land' ); ?>">
+		<div class="shop-cat-nav__track">
+			<?php foreach ( $terms as $term ) : ?>
+				<?php
+				$link   = get_term_link( $term );
+				$image  = function_exists( 'almasland_get_product_category_image' ) ? almasland_get_product_category_image( $term->term_id ) : array( 'url' => '' );
+				$active = almasland_is_shop_nav_category_active( $term );
+				if ( is_wp_error( $link ) ) {
+					continue;
+				}
+				?>
+				<a class="shop-cat-nav__item<?php echo $active ? ' is-active' : ''; ?>" href="<?php echo esc_url( $link ); ?>">
+					<span class="shop-cat-nav__icon">
+						<?php if ( ! empty( $image['url'] ) ) : ?>
+							<img src="<?php echo esc_url( $image['url'] ); ?>" alt="" width="56" height="56" loading="lazy" decoding="async">
+						<?php else : ?>
+							<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7.5 12 3l8 4.5v9L12 21l-8-4.5v-9Z" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>
+						<?php endif; ?>
+					</span>
+					<span class="shop-cat-nav__name"><?php echo esc_html( $term->name ); ?></span>
+				</a>
+			<?php endforeach; ?>
+		</div>
+	</nav>
+	<?php
+}
+
+/**
+ * Shop archive page title.
+ *
+ * @return string
+ */
+function almasland_get_shop_archive_title() {
+	if ( is_product_taxonomy() ) {
+		$term = get_queried_object();
+		if ( $term && ! is_wp_error( $term ) && ! empty( $term->name ) ) {
+			return $term->name;
+		}
+	}
+
+	if ( function_exists( 'woocommerce_page_title' ) ) {
+		return wp_strip_all_tags( woocommerce_page_title( false ) );
+	}
+
+	return __( 'فروشگاه', 'almas-land' );
+}
+
+/**
+ * Clear-filters URL for the current archive context.
+ *
+ * @return string
+ */
+function almasland_get_shop_clear_filters_url() {
+	if ( is_product_taxonomy() ) {
+		$term_link = get_term_link( get_queried_object() );
+		if ( ! is_wp_error( $term_link ) ) {
+			return $term_link;
+		}
+	}
+
+	return wc_get_page_permalink( 'shop' );
 }
 
 /**
@@ -660,10 +786,9 @@ function almasland_shop_active_filters() {
  * Render shop filter form.
  */
 function almasland_shop_filter_form() {
-	$state      = almasland_get_shop_filter_state();
-	$action     = is_shop() ? wc_get_page_permalink( 'shop' ) : get_term_link( get_queried_object() );
-	$categories = almasland_get_shop_category_options();
-	$brands     = almasland_get_shop_brand_options();
+	$state  = almasland_get_shop_filter_state();
+	$action = is_shop() ? wc_get_page_permalink( 'shop' ) : get_term_link( get_queried_object() );
+	$brands = almasland_get_shop_brand_options();
 
 	if ( is_wp_error( $action ) ) {
 		$action = wc_get_page_permalink( 'shop' );
@@ -717,21 +842,6 @@ function almasland_shop_filter_form() {
 				<span class="shop-filter-switch__track" aria-hidden="true"><span class="shop-filter-switch__thumb"></span></span>
 			</label>
 		</section>
-
-		<?php if ( $categories ) : ?>
-			<section class="shop-filter-section">
-				<h3 class="shop-filter-section__title"><?php esc_html_e( 'دسته‌بندی', 'almas-land' ); ?></h3>
-				<div class="shop-filter-checklist">
-					<?php foreach ( $categories as $term ) : ?>
-						<label class="shop-filter-check">
-							<input type="checkbox" name="filter_cat[]" value="<?php echo esc_attr( (string) $term->term_id ); ?>" <?php checked( in_array( (int) $term->term_id, $state['filter_cat'], true ) ); ?>>
-							<span><?php echo esc_html( $term->name ); ?></span>
-							<em><?php echo esc_html( almasland_persian_digits( (string) $term->count ) ); ?></em>
-						</label>
-					<?php endforeach; ?>
-				</div>
-			</section>
-		<?php endif; ?>
 
 		<div class="shop-filter-actions">
 			<button class="btn btn--primary" type="submit"><?php esc_html_e( 'اعمال فیلتر', 'almas-land' ); ?></button>
