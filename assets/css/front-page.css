@@ -1280,7 +1280,7 @@
   }
 
   .front-page-why__stats {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
   .front-page-why__stat .front-page-trust__tooltip {
@@ -1695,7 +1695,7 @@
 
 @media (max-width: 420px) {
   .front-page-catalog__grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .front-page-catalog-card__media {
@@ -1819,11 +1819,14 @@
   .front-page-features__item {
     justify-content: flex-start;
   }
+  .footer-links {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+   } 
 }
 
 @media (max-width: 480px) {
   .front-page-features__list {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 16px;
   }
 
