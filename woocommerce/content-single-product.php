@@ -26,7 +26,7 @@ $brand            = almasland_get_product_brand( $product );
 $installment_text = $product->get_meta( '_almas_installment' );
 $delivery_text    = $product->get_meta( '_almas_delivery' );
 $sales_text       = $product->get_meta( '_almas_sales' );
-$warranty_text    = $product->get_meta( '_almas_warranty' );
+$warranty_text    = trim( wp_strip_all_tags( (string) $product->get_attribute( 'guarantee' ) ) );
 $subtitle         = almasland_get_product_english_name( $product );
 $rating           = $product->get_average_rating();
 $stock_qty   = $product->get_stock_quantity();
@@ -37,7 +37,16 @@ $stock_label = $is_variable
 	? esc_html__( 'موجودی پس از انتخاب گزینه مشخص می‌شود', 'almas-land' )
 	: (
 		$product->is_in_stock()
-			? ( $stock_qty ? sprintf( esc_html__( '%s عدد در انبار موجود است', 'almas-land' ), almasland_persian_digits( $stock_qty ) ) : esc_html__( 'آماده ارسال', 'almas-land' ) ) : esc_html__( 'ناموجود', 'almas-land' )
+			? (
+				$stock_qty
+					? sprintf(
+						/* translators: %s: stock quantity */
+						esc_html__( 'موجود در انبار — فقط %s عدد باقی مانده', 'almas-land' ),
+						almasland_persian_digits( $stock_qty )
+					)
+					: esc_html__( 'موجود در انبار', 'almas-land' )
+			)
+			: esc_html__( 'ناموجود', 'almas-land' )
 	);
 $is_in_cart = false;
 
@@ -215,53 +224,29 @@ $show_price     = $buy_price_html !== '';
 	</section>
 
 	<aside class="buy-card" aria-label="<?php esc_attr_e( 'خرید محصول', 'almas-land' ); ?>">
-			<div class="seller-status">
-				<span><?php echo esc_html( $product->get_meta( '_almas_return' ) ? $product->get_meta( '_almas_return' ) : __( '۴۸ ساعت ضمانت بازگشت بی قید و شرط', 'almas-land' ) ); ?></span>
-				<span class="stock <?php echo esc_attr( almasland_stock_class( $product ) ); ?>" data-product-stock><?php echo esc_html( $stock_label ); ?></span>
+		<span class="buy-card__stock stock <?php echo esc_attr( almasland_stock_class( $product ) ); ?>" data-product-stock>
+			<span class="buy-card__stock-dot" aria-hidden="true"></span>
+			<?php echo esc_html( $stock_label ); ?>
+		</span>
+
+		<div class="buy-card__feature">
+			<span class="buy-card__feature-icon" aria-hidden="true">
+				<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3l7 3v5.2c0 4.4-2.9 8.4-7 9.8-4.1-1.4-7-5.4-7-9.8V6l7-3Z" fill="#fff" opacity=".18"/><path d="M12 3l7 3v5.2c0 4.4-2.9 8.4-7 9.8-4.1-1.4-7-5.4-7-9.8V6l7-3Z" stroke="#fff" stroke-width="1.7" stroke-linejoin="round"/><path d="m8.8 11.6 2.2 2.2 4.4-4.4" stroke="#fff" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+			</span>
+			<div class="buy-card__feature-body">
+				<strong>
+					<?php
+					echo esc_html(
+						$warranty_text
+							? $warranty_text
+							: __( '۱۸ ماه گارانتی معتبر', 'almas-land' )
+					);
+					?>
+				</strong>
 			</div>
+		</div>
 
-			<div class="warranty-box">
-				<span><?php esc_html_e( 'گارانتی', 'almas-land' ); ?></span>
-				<strong><?php echo esc_html( $warranty_text ? $warranty_text : __( '۱۸ ماه گارانتی و ضمانت اصالت کالا', 'almas-land' ) ); ?></strong>
-			</div>
-
-			<div class="installment-box">
-				<div style="display: flex; flex-direction: column; align-items: center; ">
-				<span class="installment-box__logo">خرید اعتباری با دیجی پی</span>
-				<strong><?php echo esc_html( $installment_text ? $installment_text : __( 'خرید اعتباری و اقساطی این کالا', 'almas-land' ) ); ?></strong>
-				<a href="<?php echo esc_url( almasland_get_contact_url() ); ?>"><?php esc_html_e( 'مشاهده راهنما', 'almas-land' ); ?></a>
-				</div>
-				<img src="#" alt="">
-			</div>
-
-			<div class="delivery-box">
-				<span><?php echo esc_html( $delivery_text ? $delivery_text : __( 'تحویل ۱ ساعته در سراسر تهران', 'almas-land' ) ); ?></span>
-			</div>
-
-			<div class="buy-card__trust" aria-label="<?php esc_attr_e( 'امکانات اعتمادساز خرید', 'almas-land' ); ?>">
-				<span><?php esc_html_e( 'پرداخت امن', 'almas-land' ); ?></span>
-				<span><?php esc_html_e( 'ارسال سریع', 'almas-land' ); ?></span>
-				<span><?php esc_html_e( 'ضمانت بازگشت', 'almas-land' ); ?></span>
-			</div>
-
-			<div class="woocommerce-notices-wrapper buy-card__notices"></div>
-
-			<?php if ( $is_in_cart ) : ?>
-				<div class="single-product-cart-state" aria-label="<?php esc_attr_e( 'وضعیت سبد خرید', 'almas-land' ); ?>">
-					<span class="single-product-cart-state__badge">✓ <?php esc_html_e( 'در سبد خرید', 'almas-land' ); ?></span>
-					<div class="single-product-cart-state__actions">
-						<a class="btn btn--primary" href="<?php echo esc_url( wc_get_cart_url() ); ?>"><?php esc_html_e( 'مشاهده سبد خرید', 'almas-land' ); ?></a>
-						<a class="btn btn--ghost" href="<?php echo esc_url( wc_get_checkout_url() ); ?>"><?php esc_html_e( 'تکمیل خرید', 'almas-land' ); ?></a>
-					</div>
-				</div>
-			<?php else : ?>
-				<?php if ( $is_variable ) : ?>
-					<p class="buy-card__choose-hint"><?php esc_html_e( 'لطفاً گزینه‌های محصول را انتخاب کنید', 'almas-land' ); ?></p>
-				<?php endif; ?>
-				<?php woocommerce_template_single_add_to_cart(); ?>
-			<?php endif; ?>
-
-			<?php if ( $show_price ) : ?>
+		<?php if ( $show_price ) : ?>
 			<div
 				class="buy-card__price"
 				data-buy-price
@@ -276,7 +261,95 @@ $show_price     = $buy_price_html !== '';
 					<?php echo $buy_price_html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
 				<?php endif; ?>
 			</div>
+		<?php endif; ?>
+
+		<div class="woocommerce-notices-wrapper buy-card__notices"></div>
+
+		<?php if ( $is_in_cart ) : ?>
+			<div class="single-product-cart-state" aria-label="<?php esc_attr_e( 'وضعیت سبد خرید', 'almas-land' ); ?>">
+				<span class="single-product-cart-state__badge">✓ <?php esc_html_e( 'در سبد خرید', 'almas-land' ); ?></span>
+				<div class="single-product-cart-state__actions">
+					<a class="btn btn--primary" href="<?php echo esc_url( wc_get_cart_url() ); ?>"><?php esc_html_e( 'مشاهده سبد خرید', 'almas-land' ); ?></a>
+					<a class="btn btn--ghost" href="<?php echo esc_url( wc_get_checkout_url() ); ?>"><?php esc_html_e( 'تکمیل خرید', 'almas-land' ); ?></a>
+				</div>
+			</div>
+		<?php else : ?>
+			<?php if ( $is_variable ) : ?>
+				<p class="buy-card__choose-hint"><?php esc_html_e( 'لطفاً گزینه‌های محصول را انتخاب کنید', 'almas-land' ); ?></p>
 			<?php endif; ?>
+			<?php woocommerce_template_single_add_to_cart(); ?>
+		<?php endif; ?>
+
+		<a class="buy-card__digipay" href="<?php echo esc_url( almasland_get_contact_url() ); ?>">
+			<span class="buy-card__digipay-icon" aria-hidden="true">
+				<svg viewBox="0 0 24 24" fill="none"><rect x="2.5" y="5" width="19" height="14" rx="2.5" stroke="currentColor" stroke-width="1.7"/><path d="M2.5 9.5h19" stroke="currentColor" stroke-width="1.7"/><path d="M7 15h4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+			</span>
+			<span class="buy-card__digipay-text">
+				<strong><?php esc_html_e( 'خرید اعتباری با دیجی‌پی', 'almas-land' ); ?></strong>
+				<span><?php echo esc_html( $installment_text ? $installment_text : __( 'خرید اقساطی آسان در چند کلیک', 'almas-land' ) ); ?></span>
+			</span>
+			<span class="buy-card__digipay-chevron" aria-hidden="true">
+				<svg viewBox="0 0 24 24" fill="none"><path d="M14.5 6.5 9 12l5.5 5.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+			</span>
+		</a>
+
+		<div class="buy-card__trust" aria-label="<?php esc_attr_e( 'امکانات اعتمادساز خرید', 'almas-land' ); ?>">
+			<div class="buy-card__trust-item">
+				<span class="buy-card__trust-icon" aria-hidden="true">
+					<svg viewBox="0 0 24 24" fill="none"><rect x="5" y="11" width="14" height="10" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M8 11V8a4 4 0 0 1 8 0v3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+				</span>
+				<strong><?php esc_html_e( 'پرداخت امن', 'almas-land' ); ?></strong>
+				<span><?php esc_html_e( 'درگاه بانکی معتبر', 'almas-land' ); ?></span>
+			</div>
+			<div class="buy-card__trust-item">
+				<span class="buy-card__trust-icon" aria-hidden="true">
+					<svg viewBox="0 0 24 24" fill="none"><path d="M12 3l7 3v5c0 4.2-2.8 8-7 9.4C7.8 19 5 15.2 5 11V6l7-3Z" stroke="currentColor" stroke-width="1.6"/><path d="m9 12 2 2 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+				</span>
+				<strong><?php echo esc_html( $product->get_meta( '_almas_return' ) ? $product->get_meta( '_almas_return' ) : __( 'بازگشت ۴۸ ساعته', 'almas-land' ) ); ?></strong>
+				<span><?php esc_html_e( 'بی قید و شرط', 'almas-land' ); ?></span>
+			</div>
+			<div class="buy-card__trust-item">
+				<span class="buy-card__trust-icon" aria-hidden="true">
+					<svg viewBox="0 0 24 24" fill="none"><path d="M3 7h11v10H3V7Z" stroke="currentColor" stroke-width="1.6"/><path d="M14 10h4l3 3v4h-7v-7Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="7" cy="18" r="1.7" stroke="currentColor" stroke-width="1.5"/><circle cx="17" cy="18" r="1.7" stroke="currentColor" stroke-width="1.5"/></svg>
+				</span>
+				<strong><?php echo esc_html( $delivery_text ? $delivery_text : __( 'تحویل ۱ ساعته', 'almas-land' ) ); ?></strong>
+				<span><?php esc_html_e( 'در سراسر تهران', 'almas-land' ); ?></span>
+			</div>
+		</div>
+
+		<a class="buy-card__policy" href="#spec-title">
+			<?php esc_html_e( 'جزئیات شرایط ضمانت بازگشت و گارانتی', 'almas-land' ); ?>
+			<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 6.5 9 12l5.5 5.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+		</a>
+
+		<?php if ( $is_used_product ) : ?>
+			<div class="buy-card__used">
+				<div class="buy-card__used-title">
+					<span class="buy-card__used-badge" aria-hidden="true">✓</span>
+					<strong><?php esc_html_e( 'الماس لند، خرید مطمئن کالای کارکرده', 'almas-land' ); ?></strong>
+				</div>
+				<ul class="buy-card__used-list">
+					<li>
+						<span class="buy-card__used-icon" aria-hidden="true">
+							<svg viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="6.5" stroke="currentColor" stroke-width="1.7"/><path d="m16 16 3.5 3.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><path d="M9 11h4M11 9v4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+						</span>
+						<span><?php esc_html_e( 'تست و بررسی تخصصی', 'almas-land' ); ?></span>
+					</li>
+					<li>
+						<span class="buy-card__used-icon" aria-hidden="true">
+							<svg viewBox="0 0 24 24" fill="none"><path d="M7 8.5V7a5 5 0 0 1 10 0v1.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><rect x="5" y="8.5" width="14" height="11" rx="2.2" stroke="currentColor" stroke-width="1.7"/><path d="M12 12.5v3" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+						</span>
+						<span><?php esc_html_e( 'بدون تعمیر و باز نشده', 'almas-land' ); ?></span>
+					</li>
+					<li>
+						<span class="buy-card__used-icon" aria-hidden="true">
+							<svg viewBox="0 0 24 24" fill="none"><path d="M12 3l7 3v5.2c0 4.4-2.9 8.4-7 9.8-4.1-1.4-7-5.4-7-9.8V6l7-3Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="m8.8 11.6 2.2 2.2 4.4-4.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+						</span>
+						<span><?php esc_html_e( 'ضمانت سلامت فنی و ظاهری', 'almas-land' ); ?></span>
+					</li>
+				</ul>
+			</div>
+		<?php endif; ?>
 	</aside>
 </section>
 	<?php do_action( 'woocommerce_after_single_product_summary' ); ?>

@@ -746,15 +746,6 @@ function almasland_get_buy_price_html( $product ) {
 	}
 
 	ob_start();
-
-	if ( $discount > 0 && $regular > $current ) {
-		?>
-		<div class="buy-card__price-meta">
-			<span class="discount-badge"><?php echo esc_html( almasland_persian_digits( (string) $discount ) ); ?>٪</span>
-			<del><?php echo wp_kses_post( wc_price( $regular ) ); ?></del>
-		</div>
-		<?php
-	}
 	?>
 	<strong class="buy-card__price-current">
 		<?php if ( $from_label ) : ?>
@@ -763,6 +754,24 @@ function almasland_get_buy_price_html( $product ) {
 		<?php echo wp_kses_post( wc_price( $current ) ); ?>
 	</strong>
 	<?php
+	if ( $discount > 0 && $regular > $current ) {
+		?>
+		<div class="buy-card__price-meta">
+			<del><?php echo wp_kses_post( wc_price( $regular ) ); ?></del>
+			<span class="discount-badge">
+				<?php
+				echo esc_html(
+					sprintf(
+						/* translators: %s: discount percent */
+						__( '%s٪ تخفیف', 'almas-land' ),
+						almasland_persian_digits( (string) $discount )
+					)
+				);
+				?>
+			</span>
+		</div>
+		<?php
+	}
 
 	return (string) ob_get_clean();
 }

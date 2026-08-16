@@ -32,99 +32,106 @@ do_action( 'woocommerce_before_cart' );
 			$product_subtotal  = almasland_persian_price( apply_filters( 'woocommerce_cart_item_subtotal', WC()->cart->get_product_subtotal( $_product, $cart_item['quantity'] ), $cart_item, $cart_item_key ) );
 			$regular_price     = (float) $_product->get_regular_price();
 			$current_price     = (float) $_product->get_price();
-			$discount_percent  = $regular_price > 0 && $current_price > 0 && $current_price < $regular_price ? round( ( ( $regular_price - $current_price ) / $regular_price ) * 100 ) : 0;
+			$discount_percent  = $regular_price > 0 && $current_price > 0 && $current_price < $regular_price ? (int) round( ( ( $regular_price - $current_price ) / $regular_price ) * 100 ) : 0;
+			$item_qty          = (int) $cart_item['quantity'];
 			?>
 			<div class="cart-item <?php echo esc_attr( apply_filters( 'woocommerce_cart_item_class', 'cart_item', $cart_item, $cart_item_key ) ); ?>">
-				<div class="cart-item__media">
-					<?php if ( $product_permalink ) : ?>
-						<a href="<?php echo esc_url( $product_permalink ); ?>">
+				<div class="cart-item__aside">
+					<div class="cart-item__media">
+						<?php if ( $product_permalink ) : ?>
+							<a href="<?php echo esc_url( $product_permalink ); ?>">
+								<?php echo wp_kses_post( $product_thumbnail ); ?>
+							</a>
+						<?php else : ?>
 							<?php echo wp_kses_post( $product_thumbnail ); ?>
-						</a>
-					<?php else : ?>
-						<?php echo wp_kses_post( $product_thumbnail ); ?>
-					<?php endif; ?>
-				</div>
+						<?php endif; ?>
+					</div>
 
-				<div class="cart-item__info">
-					<h2>
+					<div class="cart-item__quantity quantity-control" aria-label="<?php esc_attr_e( 'تعداد محصول', 'almas-land' ); ?>">
 						<?php
-						if ( $product_permalink ) {
-							printf( '<a href="%s">%s</a>', esc_url( $product_permalink ), wp_kses_post( $product_name ) );
+						echo apply_filters( // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+							'woocommerce_cart_item_remove_link',
+							sprintf(
+								'<a role="button" href="%s" class="cart-item__remove remove-button" aria-label="%s" data-product_id="%s" data-product_sku="%s" data-cart-remove%s><span class="screen-reader-text">%s</span></a>',
+								esc_url( wc_get_cart_remove_url( $cart_item_key ) ),
+								esc_attr( sprintf( __( 'حذف %s از سبد خرید', 'almas-land' ), wp_strip_all_tags( $product_name ) ) ),
+								esc_attr( $product_id ),
+								esc_attr( $_product->get_sku() ),
+								$item_qty <= 1 ? '' : ' hidden',
+								esc_html__( 'حذف', 'almas-land' )
+							),
+							$cart_item_key
+						);
+
+						if ( $_product->is_sold_individually() ) {
+							$min_quantity = 1;
+							$max_quantity = 1;
 						} else {
-							echo wp_kses_post( $product_name );
+							$min_quantity = 0;
+							$max_quantity = $_product->get_max_purchase_quantity();
 						}
+
+						$product_quantity = woocommerce_quantity_input(
+							array(
+								'input_name'   => "cart[{$cart_item_key}][qty]",
+								'input_value'  => $cart_item['quantity'],
+								'max_value'    => $max_quantity,
+								'min_value'    => $min_quantity,
+								'product_name' => $product_name,
+							),
+							$_product,
+							false
+						);
+
+						echo apply_filters( 'woocommerce_cart_item_quantity', $product_quantity, $cart_item_key, $cart_item ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 						?>
-					</h2>
-
-					<?php do_action( 'woocommerce_after_cart_item_name', $cart_item, $cart_item_key ); ?>
-
-					<?php if ( $product_features ) : ?>
-						<ul class="cart-item__features" aria-label="<?php esc_attr_e( 'ویژگی‌های محصول', 'almas-land' ); ?>">
-							<?php foreach ( $product_features as $feature ) : ?>
-								<li>
-									<span><?php echo esc_html( $feature['label'] ); ?>:</span>
-									<strong><?php echo esc_html( $feature['value'] ); ?></strong>
-								</li>
-							<?php endforeach; ?>
-						</ul>
-					<?php endif; ?>
-
-					<?php if ( $_product->backorders_require_notification() && $_product->is_on_backorder( $cart_item['quantity'] ) ) : ?>
-						<?php echo wp_kses_post( apply_filters( 'woocommerce_cart_item_backorder_notification', '<p class="backorder_notification">' . esc_html__( 'این کالا پس از تامین موجودی ارسال می‌شود.', 'almas-land' ) . '</p>', $product_id ) ); ?>
-					<?php endif; ?>
+					</div>
 				</div>
 
-				<div class="cart-item__quantity quantity-control" aria-label="<?php esc_attr_e( 'تعداد محصول', 'almas-land' ); ?>">
-					<?php
-					if ( $_product->is_sold_individually() ) {
-						$min_quantity = 1;
-						$max_quantity = 1;
-					} else {
-						$min_quantity = 0;
-						$max_quantity = $_product->get_max_purchase_quantity();
-					}
-					$product_quantity = woocommerce_quantity_input(
-						array(
-							'input_name'   => "cart[{$cart_item_key}][qty]",
-							'input_value'  => $cart_item['quantity'],
-							'max_value'    => $max_quantity,
-							'min_value'    => $min_quantity,
-							'product_name' => $product_name,
-						),
-						$_product,
-						false
-					);
+				<div class="cart-item__main">
+					<div class="cart-item__info">
+						<h2>
+							<?php
+							if ( $product_permalink ) {
+								printf( '<a href="%s">%s</a>', esc_url( $product_permalink ), wp_kses_post( $product_name ) );
+							} else {
+								echo wp_kses_post( $product_name );
+							}
+							?>
+						</h2>
 
-					echo apply_filters( 'woocommerce_cart_item_quantity', $product_quantity, $cart_item_key, $cart_item ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-					?>
+						<?php do_action( 'woocommerce_after_cart_item_name', $cart_item, $cart_item_key ); ?>
+
+						<?php if ( $product_features ) : ?>
+							<ul class="cart-item__features" aria-label="<?php esc_attr_e( 'ویژگی‌های محصول', 'almas-land' ); ?>">
+								<?php foreach ( $product_features as $feature ) : ?>
+									<li>
+										<span><?php echo esc_html( $feature['label'] ); ?></span>
+										<strong><?php echo esc_html( $feature['value'] ); ?></strong>
+									</li>
+								<?php endforeach; ?>
+							</ul>
+						<?php endif; ?>
+
+						<?php if ( $_product->backorders_require_notification() && $_product->is_on_backorder( $cart_item['quantity'] ) ) : ?>
+							<?php echo wp_kses_post( apply_filters( 'woocommerce_cart_item_backorder_notification', '<p class="backorder_notification">' . esc_html__( 'این کالا پس از تامین موجودی ارسال می‌شود.', 'almas-land' ) . '</p>', $product_id ) ); ?>
+						<?php endif; ?>
+					</div>
+
+					<div class="cart-item__pricing">
+						<strong class="cart-item__price"><?php echo wp_kses_post( $product_subtotal ); ?></strong>
+						<?php if ( $discount_percent ) : ?>
+							<div class="cart-item__sale">
+								<del><?php echo wp_kses_post( almasland_persian_price( wc_price( $regular_price * $cart_item['quantity'] ) ) ); ?></del>
+								<span><?php echo esc_html( almasland_persian_digits( (string) $discount_percent ) ); ?>٪</span>
+							</div>
+						<?php endif; ?>
+					</div>
+
+					<div class="cart-item__footer">
+						<a class="cart-item__later" href="<?php echo esc_url( wc_get_cart_url() ); ?>"><?php esc_html_e( 'بعدا می‌خرم', 'almas-land' ); ?></a>
+					</div>
 				</div>
-
-				<div class="cart-item__pricing">
-					<strong class="cart-item__price"><?php echo wp_kses_post( $product_subtotal ); ?></strong>
-					<?php if ( $discount_percent ) : ?>
-						<div class="cart-item__sale">
-							<span><?php echo esc_html( almasland_persian_digits( $discount_percent ) ); ?>٪</span>
-							<del><?php echo wp_kses_post( almasland_persian_price( wc_price( $regular_price * $cart_item['quantity'] ) ) ); ?></del>
-						</div>
-					<?php else : ?>
-						<span class="cart-item__unit-price"><?php echo wp_kses_post( $product_price ); ?></span>
-					<?php endif; ?>
-				</div>
-
-				<?php
-				echo apply_filters(
-					'woocommerce_cart_item_remove_link',
-					sprintf(
-						'<a role="button" href="%s" class="remove-button" aria-label="%s" data-product_id="%s" data-product_sku="%s">%s</a>',
-						esc_url( wc_get_cart_remove_url( $cart_item_key ) ),
-						esc_attr( sprintf( __( 'حذف %s از سبد خرید', 'almas-land' ), wp_strip_all_tags( $product_name ) ) ),
-						esc_attr( $product_id ),
-						esc_attr( $_product->get_sku() ),
-						esc_html__( 'حذف', 'almas-land' )
-					),
-					$cart_item_key
-				); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-				?>
 			</div>
 		<?php endforeach; ?>
 
@@ -148,4 +155,17 @@ do_action( 'woocommerce_before_cart' );
 		<?php do_action( 'woocommerce_cart_collaterals' ); ?>
 	</div>
 </div>
+
+<?php if ( ! WC()->cart->is_empty() ) : ?>
+	<div class="cart-sticky-bar" aria-label="<?php esc_attr_e( 'ثبت سفارش سریع', 'almas-land' ); ?>">
+		<div class="cart-sticky-bar__total">
+			<span><?php esc_html_e( 'جمع کل', 'almas-land' ); ?></span>
+			<strong data-cart-sticky-total><?php echo wp_kses_post( WC()->cart->get_total() ); ?></strong>
+		</div>
+		<a class="cart-sticky-bar__checkout btn btn--primary" href="<?php echo esc_url( wc_get_checkout_url() ); ?>">
+			<?php esc_html_e( 'ثبت سفارش', 'almas-land' ); ?>
+		</a>
+	</div>
+<?php endif; ?>
+
 <?php do_action( 'woocommerce_after_cart' ); ?>

@@ -701,6 +701,9 @@ document.querySelectorAll(".cart-item .quantity-control .quantity").forEach((qua
     return;
   }
 
+  const wrap = quantity.closest(".cart-item__quantity");
+  const removeLink = wrap?.querySelector("[data-cart-remove], .cart-item__remove");
+
   quantity.dataset.enhanced = "true";
   quantity.classList.add("quantity-control__wc");
 
@@ -719,15 +722,36 @@ document.querySelectorAll(".cart-item .quantity-control .quantity").forEach((qua
   quantity.prepend(minus);
   quantity.append(plus);
 
+  const syncRemoveSlot = () => {
+    const value = Number(input.value || 1);
+    const min = Number(input.min || 1);
+    const showRemove = value <= Math.max(1, min);
+    minus.hidden = showRemove;
+    if (removeLink) {
+      removeLink.hidden = !showRemove;
+    }
+  };
+
   minus.addEventListener("click", () => {
-    input.value = String(Math.max(Number(input.min || 1), Number(input.value || 1) - 1));
+    const next = Math.max(Number(input.min || 1), Number(input.value || 1) - 1);
+    input.value = String(next);
     input.dispatchEvent(new Event("change", { bubbles: true }));
+    syncRemoveSlot();
   });
 
   plus.addEventListener("click", () => {
-    input.value = String(Number(input.value || 1) + 1);
+    const max = Number(input.max || 0);
+    let next = Number(input.value || 1) + 1;
+    if (max > 0) {
+      next = Math.min(max, next);
+    }
+    input.value = String(next);
     input.dispatchEvent(new Event("change", { bubbles: true }));
+    syncRemoveSlot();
   });
+
+  input.addEventListener("change", syncRemoveSlot);
+  syncRemoveSlot();
 });
 
 const cartUpdateButton = document.querySelector(".woocommerce-cart-form .cart-update-button");
