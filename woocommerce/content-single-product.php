@@ -31,7 +31,7 @@ $subtitle         = almasland_get_product_english_name( $product );
 $rating           = $product->get_average_rating();
 $stock_qty   = $product->get_stock_quantity();
 $is_variable = $product->is_type( 'variable' );
-$is_used_product = has_term( 'used', 'product_cat', $product->get_id() );
+$is_used_product = function_exists( 'almasland_is_used_product' ) ? almasland_is_used_product( $product ) : has_term( 'used', 'product_cat', $product->get_id() );
 $apsb_specs_html  = $is_used_product && function_exists( 'apsb_render_product_specs' ) ? apsb_render_product_specs( $product->get_id() ) : '';
 $stock_label = $is_variable
 	? esc_html__( 'موجودی پس از انتخاب گزینه مشخص می‌شود', 'almas-land' )

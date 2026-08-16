@@ -954,26 +954,41 @@ function almasland_format_plain_price( $amount ) {
 }
 
 /**
- * Short one-line summary for product cards.
+ * Whether a product belongs to the used / second-hand category.
+ *
+ * @param WC_Product|null $product Product.
+ * @return bool
+ */
+function almasland_is_used_product( $product ) {
+	if ( ! $product instanceof WC_Product ) {
+		return false;
+	}
+
+	$product_id = $product->is_type( 'variation' ) ? $product->get_parent_id() : $product->get_id();
+
+	return $product_id > 0 && has_term( 'used', 'product_cat', $product_id );
+}
+
+/**
+ * Short one-line summary for product cards (admin field only — never attributes).
  *
  * @param WC_Product $product Product.
  * @return string
  */
 function almasland_get_product_card_summary( $product ) {
-	if ( ! $product ) {
+	if ( ! $product instanceof WC_Product ) {
 		return '';
 	}
 
-	$features = trim( (string) $product->get_meta( '_almas_features' ) );
-	if ( $features ) {
-		$lines = preg_split( '/\r\n|\r|\n/', $features );
-		return trim( (string) ( $lines[0] ?? '' ) );
+	$source = $product;
+	if ( $product->is_type( 'variation' ) ) {
+		$parent = wc_get_product( $product->get_parent_id() );
+		if ( $parent ) {
+			$source = $parent;
+		}
 	}
 
-	$values = array_values( almasland_get_product_attribute_specs( $product, true ) );
-	$values = array_slice( array_filter( $values ), 0, 3 );
-
-	return $values ? implode( ' / ', $values ) : '';
+	return trim( (string) $source->get_meta( '_almas_card_specs' ) );
 }
 
 /**
@@ -983,33 +998,25 @@ function almasland_get_product_card_summary( $product ) {
  * @return array{text: string, tone: string, bg?: string, color?: string}|null
  */
 function almasland_get_product_grade_badge( $product ) {
-	if ( ! $product ) {
+	if ( ! $product instanceof WC_Product ) {
 		return null;
 	}
 
-	$candidates = array(
-		trim( (string) $product->get_meta( '_almas_cosmetic' ) ),
-		trim( (string) $product->get_meta( '_almas_technical' ) ),
-	);
-
-	foreach ( $candidates as $text ) {
-		if ( $text && preg_match( '/درجه/u', $text ) ) {
-			return array(
-				'text'  => $text,
-				'tone'  => almasland_get_product_grade_tone( $text ),
-			);
+	$source = $product;
+	if ( $product->is_type( 'variation' ) ) {
+		$parent = wc_get_product( $product->get_parent_id() );
+		if ( $parent ) {
+			$source = $parent;
 		}
 	}
 
-	foreach ( almasland_get_product_badges( $product ) as $badge ) {
-		if ( ! empty( $badge['text'] ) && preg_match( '/درجه/u', $badge['text'] ) ) {
-			return array(
-				'text'  => $badge['text'],
-				'tone'  => almasland_get_product_grade_tone( $badge['text'] ),
-				'bg'    => $badge['bg'],
-				'color' => $badge['color'],
-			);
-		}
+	$key         = sanitize_key( (string) $source->get_meta( '_almas_card_grade' ) );
+	$definitions = function_exists( 'almasland_get_product_card_grade_definitions' )
+		? almasland_get_product_card_grade_definitions()
+		: array();
+
+	if ( $key && isset( $definitions[ $key ] ) ) {
+		return $definitions[ $key ];
 	}
 
 	return null;
@@ -1022,12 +1029,16 @@ function almasland_get_product_grade_badge( $product ) {
  * @return string
  */
 function almasland_get_product_grade_tone( $text ) {
-	if ( preg_match( '/A|الف/u', $text ) ) {
-		return 'a';
-	}
+	$map = array(
+		'مشابه نو'   => 'like-new',
+		'بسیار تمیز' => 'very-clean',
+		'تمیز'       => 'clean',
+		'معمولی'     => 'fair',
+	);
 
-	if ( preg_match( '/B|ب/u', $text ) ) {
-		return 'b';
+	$text = trim( (string) $text );
+	if ( isset( $map[ $text ] ) ) {
+		return $map[ $text ];
 	}
 
 	return 'default';
@@ -1208,11 +1219,15 @@ function almasland_get_home_catalog_card_html( $product ) {
 		return '';
 	}
 
-	$product_link = $product->get_permalink();
-	$summary      = almasland_get_product_card_summary( $product );
-	$grade        = almasland_get_product_grade_badge( $product );
-	$price        = (float) $product->get_price();
-	$grade_style  = '';
+	$product_link  = $product->get_permalink();
+	$summary       = almasland_get_product_card_summary( $product );
+	$grade         = almasland_get_product_grade_badge( $product );
+	$sale_price    = (float) $product->get_price();
+	$regular_price = (float) $product->get_regular_price();
+	$is_used       = almasland_is_used_product( $product );
+	$grade_style   = '';
+	$card_class    = 'front-page-catalog-card' . ( $is_used ? ' front-page-catalog-card--used' : '' );
+	$cta_label     = $product->is_in_stock() ? __( 'مشاهده و خرید', 'almas-land' ) : __( 'ناموجود', 'almas-land' );
 
 	if ( $grade && ! empty( $grade['bg'] ) ) {
 		$grade_style = sprintf(
@@ -1224,25 +1239,35 @@ function almasland_get_home_catalog_card_html( $product ) {
 
 	ob_start();
 	?>
-	<a class="front-page-catalog-card" href="<?php echo esc_url( $product_link ); ?>">
-		<span class="front-page-catalog-card__media">
+	<article class="<?php echo esc_attr( $card_class ); ?>">
+		<a class="front-page-catalog-card__media" href="<?php echo esc_url( $product_link ); ?>">
 			<?php echo wp_kses_post( $product->get_image( 'almasland-card', array( 'loading' => 'lazy', 'decoding' => 'async' ) ) ); ?>
-		</span>
-		<span class="front-page-catalog-card__body">
-			<strong class="front-page-catalog-card__title"><?php echo esc_html( almasland_get_product_card_title( $product ) ); ?></strong>
-			<?php if ( $summary ) : ?>
-				<span class="front-page-catalog-card__specs"><?php echo esc_html( $summary ); ?></span>
-			<?php endif; ?>
+		</a>
+		<div class="front-page-catalog-card__body">
+			<a class="front-page-catalog-card__title" href="<?php echo esc_url( $product_link ); ?>">
+				<?php echo esc_html( almasland_get_product_card_title( $product ) ); ?>
+			</a>
 			<?php if ( $grade ) : ?>
 				<span class="front-page-catalog-card__grade front-page-catalog-card__grade--<?php echo esc_attr( $grade['tone'] ); ?>"<?php echo $grade_style; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>>
 					<?php echo esc_html( $grade['text'] ); ?>
 				</span>
 			<?php endif; ?>
-			<?php if ( $price > 0 ) : ?>
-				<span class="front-page-catalog-card__price"><?php echo esc_html( almasland_format_plain_price( $price ) ); ?></span>
+			<?php if ( $summary ) : ?>
+				<span class="front-page-catalog-card__specs"><?php echo esc_html( $summary ); ?></span>
 			<?php endif; ?>
-		</span>
-	</a>
+			<span class="front-page-catalog-card__prices">
+				<?php if ( $sale_price > 0 ) : ?>
+					<span class="front-page-catalog-card__price"><?php echo esc_html( almasland_format_plain_price( $sale_price ) ); ?></span>
+				<?php endif; ?>
+				<?php if ( $regular_price > 0 && $regular_price > $sale_price ) : ?>
+					<span class="front-page-catalog-card__price-regular"><del><?php echo esc_html( almasland_format_plain_price( $regular_price ) ); ?></del></span>
+				<?php endif; ?>
+			</span>
+			<a class="front-page-catalog-card__cta" href="<?php echo esc_url( $product_link ); ?>">
+				<?php echo esc_html( $cta_label ); ?>
+			</a>
+		</div>
+	</article>
 	<?php
 	return (string) ob_get_clean();
 }

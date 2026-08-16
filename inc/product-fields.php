@@ -21,6 +21,17 @@ function almasland_product_fields() {
 			'type'        => 'text',
 			'description' => esc_html__( 'عنوان کوتاه برای کارت‌های محصول (مثلاً: msi mini case 8 / 128). اگر خالی باشد، عنوان اصلی نمایش داده می‌شود.', 'almas-land' ),
 		),
+		'_almas_card_specs'     => array(
+			'label'       => esc_html__( 'مشخصات کارت', 'almas-land' ),
+			'type'        => 'text',
+			'description' => esc_html__( 'متن مشخصات روی کارت؛ مثلاً: i3 6100 / 8GB ram / 256 Gb SSD', 'almas-land' ),
+		),
+		'_almas_card_grade'     => array(
+			'label'       => esc_html__( 'Grade', 'almas-land' ),
+			'type'        => 'select',
+			'description' => esc_html__( 'وضعیت ظاهری برای نمایش رنگی روی کارت محصولات دست‌دوم.', 'almas-land' ),
+			'options'     => almasland_get_product_card_grade_options(),
+		),
 		'_almas_brand'          => array( 'label' => esc_html__( 'برند محصول', 'almas-land' ), 'type' => 'text' ),
 		'_almas_warranty'       => array( 'label' => esc_html__( 'گارانتی', 'almas-land' ), 'type' => 'text' ),
 		'_almas_cosmetic'       => array( 'label' => esc_html__( 'وضعیت ظاهری کالا', 'almas-land' ), 'type' => 'text' ),
@@ -34,6 +45,55 @@ function almasland_product_fields() {
 		'_almas_video'          => array( 'label' => esc_html__( 'ویدئوی محصول', 'almas-land' ), 'type' => 'url' ),
 		'_almas_custom_specs'   => array( 'label' => esc_html__( 'جدول مشخصات سفارشی', 'almas-land' ), 'type' => 'textarea', 'description' => esc_html__( 'هر خط با فرمت: عنوان | مقدار', 'almas-land' ) ),
 		'_almas_cta_text'       => array( 'label' => esc_html__( 'متن CTA اختصاصی محصول', 'almas-land' ), 'type' => 'textarea' ),
+	);
+}
+
+/**
+ * Grade options for used product cards (key => label).
+ *
+ * @return array<string, string>
+ */
+function almasland_get_product_card_grade_options() {
+	return array(
+		''            => esc_html__( '— انتخاب کنید —', 'almas-land' ),
+		'like_new'    => esc_html__( 'مشابه نو', 'almas-land' ),
+		'very_clean'  => esc_html__( 'بسیار تمیز', 'almas-land' ),
+		'clean'       => esc_html__( 'تمیز', 'almas-land' ),
+		'fair'        => esc_html__( 'معمولی', 'almas-land' ),
+	);
+}
+
+/**
+ * Grade visual definitions (green → orange).
+ *
+ * @return array<string, array{text: string, tone: string, bg: string, color: string}>
+ */
+function almasland_get_product_card_grade_definitions() {
+	return array(
+		'like_new'   => array(
+			'text'  => 'مشابه نو',
+			'tone'  => 'like-new',
+			'bg'    => '#dcfce7',
+			'color' => '#15803d',
+		),
+		'very_clean' => array(
+			'text'  => 'بسیار تمیز',
+			'tone'  => 'very-clean',
+			'bg'    => '#d1fae5',
+			'color' => '#0f766e',
+		),
+		'clean'      => array(
+			'text'  => 'تمیز',
+			'tone'  => 'clean',
+			'bg'    => '#fef3c7',
+			'color' => '#b45309',
+		),
+		'fair'       => array(
+			'text'  => 'معمولی',
+			'tone'  => 'fair',
+			'bg'    => '#ffedd5',
+			'color' => '#c2410c',
+		),
 	);
 }
 
@@ -58,6 +118,9 @@ function almasland_add_product_fields() {
 
 		if ( 'textarea' === $field['type'] ) {
 			woocommerce_wp_textarea_input( $args );
+		} elseif ( 'select' === $field['type'] ) {
+			$args['options'] = isset( $field['options'] ) ? $field['options'] : array();
+			woocommerce_wp_select( $args );
 		} else {
 			$args['type'] = 'url' === $field['type'] ? 'url' : 'text';
 			woocommerce_wp_text_input( $args );
@@ -95,6 +158,12 @@ function almasland_save_product_fields( $product ) {
 			$value = esc_url_raw( $value );
 		} elseif ( 'textarea' === $field['type'] ) {
 			$value = sanitize_textarea_field( $value );
+		} elseif ( 'select' === $field['type'] ) {
+			$value = sanitize_key( $value );
+			$options = isset( $field['options'] ) ? $field['options'] : array();
+			if ( ! array_key_exists( $value, $options ) ) {
+				$value = '';
+			}
 		} else {
 			$value = sanitize_text_field( $value );
 		}

@@ -38,14 +38,12 @@ $view_all_url = add_query_arg( 'on_sale', '1', wc_get_page_permalink( 'shop' ) )
 		<div class="swiper-wrapper">
 			<?php foreach ( $products as $product ) : ?>
 				<?php
-				$product_id       = $product->get_id();
 				$product_link     = $product->get_permalink();
 				$discount_percent = almasland_get_discount_percent( $product );
 				$summary          = almasland_get_product_card_summary( $product );
 				$grade            = almasland_get_product_grade_badge( $product );
 				$regular_price    = (float) $product->get_regular_price();
 				$sale_price       = (float) $product->get_price();
-				$can_ajax_cart    = $product->is_purchasable() && $product->is_in_stock() && $product->is_type( 'simple' );
 				$grade_style      = '';
 
 				if ( $grade && ! empty( $grade['bg'] ) ) {
@@ -84,14 +82,14 @@ $view_all_url = add_query_arg( 'on_sale', '1', wc_get_page_permalink( 'shop' ) )
 							<?php echo esc_html( almasland_get_product_card_title( $product ) ); ?>
 						</a>
 
-						<?php if ( $summary ) : ?>
-							<p class="front-page-offer-card__specs"><?php echo esc_html( $summary ); ?></p>
-						<?php endif; ?>
-
 						<?php if ( $grade ) : ?>
 							<span class="front-page-offer-card__grade front-page-offer-card__grade--<?php echo esc_attr( $grade['tone'] ); ?>"<?php echo $grade_style; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>>
 								<?php echo esc_html( $grade['text'] ); ?>
 							</span>
+						<?php endif; ?>
+
+						<?php if ( $summary ) : ?>
+							<p class="front-page-offer-card__specs"><?php echo esc_html( $summary ); ?></p>
 						<?php endif; ?>
 
 						<div class="front-page-offer-card__prices">
@@ -106,21 +104,9 @@ $view_all_url = add_query_arg( 'on_sale', '1', wc_get_page_permalink( 'shop' ) )
 							<?php endif; ?>
 						</div>
 
-						<?php if ( $can_ajax_cart ) : ?>
-							<button
-								type="button"
-								class="front-page-offer-card__cart"
-								data-offer-add-to-cart="<?php echo esc_attr( $product_id ); ?>"
-							>
-								<?php esc_html_e( 'افزودن به سبد خرید', 'almas-land' ); ?>
-								<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 18.5A1.5 1.5 0 1 0 7 21a1.5 1.5 0 0 0 0-2.5Zm10 0A1.5 1.5 0 1 0 17 21a1.5 1.5 0 0 0 0-2.5ZM6.2 6l.4 2h11.7l-1.1 5.2H8L6.4 4H3V2h5l.4 2H21l-2.2 11.2H7.8L7.3 13H19v2H7l-.8-4.2L5.3 6h.9Z" fill="currentColor"/></svg>
-							</button>
-						<?php else : ?>
-							<a class="front-page-offer-card__cart front-page-offer-card__cart--link" href="<?php echo esc_url( $product_link ); ?>">
-								<?php echo esc_html( $product->is_in_stock() ? __( 'مشاهده و خرید', 'almas-land' ) : __( 'ناموجود', 'almas-land' ) ); ?>
-								<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 18.5A1.5 1.5 0 1 0 7 21a1.5 1.5 0 0 0 0-2.5Zm10 0A1.5 1.5 0 1 0 17 21a1.5 1.5 0 0 0 0-2.5ZM6.2 6l.4 2h11.7l-1.1 5.2H8L6.4 4H3V2h5l.4 2H21l-2.2 11.2H7.8L7.3 13H19v2H7l-.8-4.2L5.3 6h.9Z" fill="currentColor"/></svg>
-							</a>
-						<?php endif; ?>
+						<a class="front-page-offer-card__cart front-page-offer-card__cart--link" href="<?php echo esc_url( $product_link ); ?>">
+							<?php echo esc_html( $product->is_in_stock() ? __( 'مشاهده و خرید', 'almas-land' ) : __( 'ناموجود', 'almas-land' ) ); ?>
+						</a>
 					</div>
 				</article>
 			<?php endforeach; ?>
