@@ -69,11 +69,8 @@ function almasland_shop_filter_keys() {
 		'min_price',
 		'max_price',
 		'in_stock',
+		'fast_shipping',
 		'on_sale',
-		'featured',
-		'new_arrival',
-		'has_warranty',
-		'min_rating',
 		'filter_brand',
 		'filter_cat',
 	);
@@ -90,17 +87,14 @@ function almasland_get_shop_filter_state() {
 	$orderby      = isset( $sort_options[ $orderby ] ) ? $orderby : 'date';
 
 	$state = array(
-		'orderby'      => $orderby,
-		'min_price'    => isset( $_GET['min_price'] ) ? absint( wp_unslash( $_GET['min_price'] ) ) : 0,
-		'max_price'    => isset( $_GET['max_price'] ) ? absint( wp_unslash( $_GET['max_price'] ) ) : 0,
-		'in_stock'     => ! empty( $_GET['in_stock'] ),
-		'on_sale'      => ! empty( $_GET['on_sale'] ),
-		'featured'     => ! empty( $_GET['featured'] ),
-		'new_arrival'  => ! empty( $_GET['new_arrival'] ),
-		'has_warranty' => ! empty( $_GET['has_warranty'] ),
-		'min_rating'   => isset( $_GET['min_rating'] ) ? min( 5, absint( wp_unslash( $_GET['min_rating'] ) ) ) : 0,
-		'filter_brand' => isset( $_GET['filter_brand'] ) ? array_map( 'sanitize_text_field', (array) wp_unslash( $_GET['filter_brand'] ) ) : array(),
-		'filter_cat'   => isset( $_GET['filter_cat'] ) ? array_map( 'absint', (array) wp_unslash( $_GET['filter_cat'] ) ) : array(),
+		'orderby'        => $orderby,
+		'min_price'      => isset( $_GET['min_price'] ) ? absint( wp_unslash( $_GET['min_price'] ) ) : 0,
+		'max_price'      => isset( $_GET['max_price'] ) ? absint( wp_unslash( $_GET['max_price'] ) ) : 0,
+		'in_stock'       => ! empty( $_GET['in_stock'] ),
+		'fast_shipping'  => ! empty( $_GET['fast_shipping'] ),
+		'on_sale'        => ! empty( $_GET['on_sale'] ),
+		'filter_brand'   => isset( $_GET['filter_brand'] ) ? array_map( 'sanitize_text_field', (array) wp_unslash( $_GET['filter_brand'] ) ) : array(),
+		'filter_cat'     => isset( $_GET['filter_cat'] ) ? array_map( 'absint', (array) wp_unslash( $_GET['filter_cat'] ) ) : array(),
 	);
 
 	$state['filter_brand'] = array_values( array_filter( $state['filter_brand'] ) );
@@ -148,7 +142,7 @@ function almasland_shop_filter_url( $args = array(), $remove = array() ) {
 		$value = wp_unslash( $_GET[ $key ] );
 		if ( is_array( $value ) ) {
 			$current[ $key ] = array_map( 'sanitize_text_field', $value );
-		} elseif ( in_array( $key, array( 'min_price', 'max_price', 'min_rating' ), true ) ) {
+		} elseif ( in_array( $key, array( 'min_price', 'max_price' ), true ) ) {
 			$current[ $key ] = absint( $value );
 		} else {
 			$current[ $key ] = sanitize_text_field( $value );
@@ -295,7 +289,6 @@ function almasland_get_shop_category_options() {
 			'taxonomy'   => 'product_cat',
 			'hide_empty' => true,
 			'parent'     => 0,
-			'number'     => 12,
 		)
 	);
 
@@ -340,6 +333,14 @@ function almasland_apply_shop_filters( $query ) {
 		);
 	}
 
+	if ( $state['fast_shipping'] ) {
+		$meta_query[] = array(
+			'key'     => '_almas_fixed_badges',
+			'value'   => 'express_delivery',
+			'compare' => 'LIKE',
+		);
+	}
+
 	if ( $state['on_sale'] ) {
 		$sale_ids = array_map( 'absint', wc_get_product_ids_on_sale() );
 		if ( empty( $sale_ids ) ) {
@@ -355,44 +356,6 @@ function almasland_apply_shop_filters( $query ) {
 		}
 
 		$query->set( 'post__in', $sale_ids );
-	}
-
-	if ( $state['featured'] ) {
-		$tax_query[] = array(
-			'taxonomy' => 'product_visibility',
-			'field'    => 'name',
-			'terms'    => array( 'featured' ),
-			'operator' => 'IN',
-		);
-	}
-
-	if ( $state['new_arrival'] ) {
-		$query->set(
-			'date_query',
-			array(
-				array(
-					'column' => 'post_date',
-					'after'  => '30 days ago',
-				),
-			)
-		);
-	}
-
-	if ( $state['has_warranty'] ) {
-		$meta_query[] = array(
-			'key'     => '_almas_warranty',
-			'value'   => '',
-			'compare' => '!=',
-		);
-	}
-
-	if ( $state['min_rating'] > 0 ) {
-		$meta_query[] = array(
-			'key'     => '_wc_average_rating',
-			'value'   => $state['min_rating'],
-			'compare' => '>=',
-			'type'    => 'DECIMAL',
-		);
 	}
 
 	if ( $state['min_price'] > 0 ) {
@@ -451,12 +414,12 @@ function almasland_apply_shop_filters( $query ) {
 		}
 	}
 
-	if ( ! empty( $state['filter_cat'] ) && ! is_product_category() ) {
+	if ( ! empty( $state['filter_cat'] ) ) {
 		$tax_query[] = array(
-			'taxonomy' => 'product_cat',
-			'field'    => 'term_id',
-			'terms'    => $state['filter_cat'],
-			'operator' => 'IN',
+			'taxonomy'         => 'product_cat',
+			'field'            => 'term_id',
+			'terms'            => $state['filter_cat'],
+			'operator'         => 'IN',
 			'include_children' => true,
 		);
 	}
@@ -563,38 +526,20 @@ function almasland_shop_active_filters() {
 
 	if ( $state['in_stock'] ) {
 		$chips[] = array(
-			'label' => __( 'فقط موجود', 'almas-land' ),
+			'label' => __( 'کالاهای موجود', 'almas-land' ),
 			'url'   => almasland_shop_filter_url( array(), array( 'in_stock' ) ),
+		);
+	}
+	if ( $state['fast_shipping'] ) {
+		$chips[] = array(
+			'label' => __( 'ارسال سریع', 'almas-land' ),
+			'url'   => almasland_shop_filter_url( array(), array( 'fast_shipping' ) ),
 		);
 	}
 	if ( $state['on_sale'] ) {
 		$chips[] = array(
 			'label' => __( 'تخفیف‌دار', 'almas-land' ),
 			'url'   => almasland_shop_filter_url( array(), array( 'on_sale' ) ),
-		);
-	}
-	if ( $state['featured'] ) {
-		$chips[] = array(
-			'label' => __( 'محصول ویژه', 'almas-land' ),
-			'url'   => almasland_shop_filter_url( array(), array( 'featured' ) ),
-		);
-	}
-	if ( $state['new_arrival'] ) {
-		$chips[] = array(
-			'label' => __( 'تازه‌ها', 'almas-land' ),
-			'url'   => almasland_shop_filter_url( array(), array( 'new_arrival' ) ),
-		);
-	}
-	if ( $state['has_warranty'] ) {
-		$chips[] = array(
-			'label' => __( 'گارانتی‌دار', 'almas-land' ),
-			'url'   => almasland_shop_filter_url( array(), array( 'has_warranty' ) ),
-		);
-	}
-	if ( $state['min_rating'] > 0 ) {
-		$chips[] = array(
-			'label' => sprintf( __( 'امتیاز %s+', 'almas-land' ), almasland_persian_digits( (string) $state['min_rating'] ) ),
-			'url'   => almasland_shop_filter_url( array(), array( 'min_rating' ) ),
 		);
 	}
 	if ( $state['min_price'] > 0 || $state['max_price'] > 0 ) {
@@ -682,48 +627,26 @@ function almasland_shop_filter_form() {
 			<input type="hidden" name="orderby" value="<?php echo esc_attr( $state['orderby'] ); ?>">
 		<?php endif; ?>
 
-		<div class="shop-filter-quick">
-			<label class="shop-filter-toggle<?php echo $state['in_stock'] ? ' is-active' : ''; ?>">
-				<input type="checkbox" name="in_stock" value="1" <?php checked( $state['in_stock'] ); ?>>
-				<span><?php esc_html_e( 'فقط موجود', 'almas-land' ); ?></span>
-			</label>
-			<label class="shop-filter-toggle<?php echo $state['on_sale'] ? ' is-active' : ''; ?>">
-				<input type="checkbox" name="on_sale" value="1" <?php checked( $state['on_sale'] ); ?>>
-				<span><?php esc_html_e( 'تخفیف‌دار', 'almas-land' ); ?></span>
-			</label>
-			<label class="shop-filter-toggle<?php echo $state['featured'] ? ' is-active' : ''; ?>">
-				<input type="checkbox" name="featured" value="1" <?php checked( $state['featured'] ); ?>>
-				<span><?php esc_html_e( 'ویژه', 'almas-land' ); ?></span>
-			</label>
-			<label class="shop-filter-toggle<?php echo $state['new_arrival'] ? ' is-active' : ''; ?>">
-				<input type="checkbox" name="new_arrival" value="1" <?php checked( $state['new_arrival'] ); ?>>
-				<span><?php esc_html_e( 'تازه‌ها', 'almas-land' ); ?></span>
-			</label>
-			<label class="shop-filter-toggle<?php echo $state['has_warranty'] ? ' is-active' : ''; ?>">
-				<input type="checkbox" name="has_warranty" value="1" <?php checked( $state['has_warranty'] ); ?>>
-				<span><?php esc_html_e( 'گارانتی‌دار', 'almas-land' ); ?></span>
-			</label>
-		</div>
-
-		<?php if ( $categories ) : ?>
-			<details class="shop-filter-group" open>
-				<summary><?php esc_html_e( 'دسته‌بندی', 'almas-land' ); ?></summary>
-				<div class="shop-filter-group__body shop-filter-checklist">
-					<?php foreach ( $categories as $term ) : ?>
-						<label class="shop-filter-check">
-							<input type="checkbox" name="filter_cat[]" value="<?php echo esc_attr( (string) $term->term_id ); ?>" <?php checked( in_array( (int) $term->term_id, $state['filter_cat'], true ) ); ?>>
-							<span><?php echo esc_html( $term->name ); ?></span>
-							<em><?php echo esc_html( almasland_persian_digits( (string) $term->count ) ); ?></em>
-						</label>
-					<?php endforeach; ?>
-				</div>
-			</details>
-		<?php endif; ?>
+		<section class="shop-filter-section">
+			<h3 class="shop-filter-section__title"><?php esc_html_e( 'محدوده قیمت', 'almas-land' ); ?></h3>
+			<div class="shop-filter-price">
+				<label class="shop-filter-price__field">
+					<span><?php esc_html_e( 'از', 'almas-land' ); ?></span>
+					<input type="number" name="min_price" min="0" step="100000" inputmode="numeric" value="<?php echo $state['min_price'] ? esc_attr( (string) $state['min_price'] ) : ''; ?>" placeholder="۰">
+				</label>
+				<span class="shop-filter-price__sep" aria-hidden="true"></span>
+				<label class="shop-filter-price__field">
+					<span><?php esc_html_e( 'تا', 'almas-land' ); ?></span>
+					<input type="number" name="max_price" min="0" step="100000" inputmode="numeric" value="<?php echo $state['max_price'] ? esc_attr( (string) $state['max_price'] ) : ''; ?>" placeholder="<?php esc_attr_e( 'حداکثر', 'almas-land' ); ?>">
+				</label>
+			</div>
+			<p class="shop-filter-hint"><?php esc_html_e( 'مبالغ به تومان', 'almas-land' ); ?></p>
+		</section>
 
 		<?php if ( $brands ) : ?>
-			<details class="shop-filter-group" open>
-				<summary><?php esc_html_e( 'برند', 'almas-land' ); ?></summary>
-				<div class="shop-filter-group__body shop-filter-checklist">
+			<section class="shop-filter-section">
+				<h3 class="shop-filter-section__title"><?php esc_html_e( 'برند', 'almas-land' ); ?></h3>
+				<div class="shop-filter-checklist">
 					<?php foreach ( $brands as $brand ) : ?>
 						<label class="shop-filter-check">
 							<input type="checkbox" name="filter_brand[]" value="<?php echo esc_attr( $brand['value'] ); ?>" <?php checked( in_array( $brand['value'], $state['filter_brand'], true ) ); ?>>
@@ -732,38 +655,36 @@ function almasland_shop_filter_form() {
 						</label>
 					<?php endforeach; ?>
 				</div>
-			</details>
+			</section>
 		<?php endif; ?>
 
-		<details class="shop-filter-group" open>
-			<summary><?php esc_html_e( 'امتیاز محصول', 'almas-land' ); ?></summary>
-			<div class="shop-filter-group__body shop-filter-rating">
-				<?php foreach ( array( 4, 3 ) as $rating ) : ?>
-					<label class="shop-filter-toggle<?php echo (int) $state['min_rating'] === $rating ? ' is-active' : ''; ?>">
-						<input type="radio" name="min_rating" value="<?php echo esc_attr( (string) $rating ); ?>" <?php checked( (int) $state['min_rating'], $rating ); ?>>
-						<span><?php echo esc_html( sprintf( __( '%s ستاره به بالا', 'almas-land' ), almasland_persian_digits( (string) $rating ) ) ); ?></span>
-					</label>
-				<?php endforeach; ?>
-				<label class="shop-filter-toggle<?php echo 0 === (int) $state['min_rating'] ? ' is-active' : ''; ?>">
-					<input type="radio" name="min_rating" value="0" <?php checked( (int) $state['min_rating'], 0 ); ?>>
-					<span><?php esc_html_e( 'همه امتیازها', 'almas-land' ); ?></span>
-				</label>
-			</div>
-		</details>
+		<section class="shop-filter-section shop-filter-section--switches">
+			<label class="shop-filter-switch">
+				<span class="shop-filter-switch__label"><?php esc_html_e( 'کالاهای موجود', 'almas-land' ); ?></span>
+				<input type="checkbox" name="in_stock" value="1" <?php checked( $state['in_stock'] ); ?>>
+				<span class="shop-filter-switch__track" aria-hidden="true"><span class="shop-filter-switch__thumb"></span></span>
+			</label>
+			<label class="shop-filter-switch">
+				<span class="shop-filter-switch__label"><?php esc_html_e( 'ارسال سریع', 'almas-land' ); ?></span>
+				<input type="checkbox" name="fast_shipping" value="1" <?php checked( $state['fast_shipping'] ); ?>>
+				<span class="shop-filter-switch__track" aria-hidden="true"><span class="shop-filter-switch__thumb"></span></span>
+			</label>
+		</section>
 
-		<details class="shop-filter-group" open>
-			<summary><?php esc_html_e( 'بازه قیمت (تومان)', 'almas-land' ); ?></summary>
-			<div class="shop-filter-group__body shop-filter-price">
-				<label>
-					<span><?php esc_html_e( 'حداقل', 'almas-land' ); ?></span>
-					<input type="number" name="min_price" min="0" step="100000" inputmode="numeric" value="<?php echo $state['min_price'] ? esc_attr( (string) $state['min_price'] ) : ''; ?>" placeholder="۰">
-				</label>
-				<label>
-					<span><?php esc_html_e( 'حداکثر', 'almas-land' ); ?></span>
-					<input type="number" name="max_price" min="0" step="100000" inputmode="numeric" value="<?php echo $state['max_price'] ? esc_attr( (string) $state['max_price'] ) : ''; ?>" placeholder="∞">
-				</label>
-			</div>
-		</details>
+		<?php if ( $categories ) : ?>
+			<section class="shop-filter-section">
+				<h3 class="shop-filter-section__title"><?php esc_html_e( 'دسته‌بندی', 'almas-land' ); ?></h3>
+				<div class="shop-filter-checklist">
+					<?php foreach ( $categories as $term ) : ?>
+						<label class="shop-filter-check">
+							<input type="checkbox" name="filter_cat[]" value="<?php echo esc_attr( (string) $term->term_id ); ?>" <?php checked( in_array( (int) $term->term_id, $state['filter_cat'], true ) ); ?>>
+							<span><?php echo esc_html( $term->name ); ?></span>
+							<em><?php echo esc_html( almasland_persian_digits( (string) $term->count ) ); ?></em>
+						</label>
+					<?php endforeach; ?>
+				</div>
+			</section>
+		<?php endif; ?>
 
 		<div class="shop-filter-actions">
 			<button class="btn btn--primary" type="submit"><?php esc_html_e( 'اعمال فیلتر', 'almas-land' ); ?></button>

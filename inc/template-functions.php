@@ -1791,14 +1791,10 @@ function almasland_get_shop_pagination_add_args() {
 		$add_args['max_price'] = $state['max_price'];
 	}
 
-	foreach ( array( 'in_stock', 'on_sale', 'featured', 'new_arrival', 'has_warranty' ) as $flag ) {
+	foreach ( array( 'in_stock', 'fast_shipping', 'on_sale' ) as $flag ) {
 		if ( ! empty( $state[ $flag ] ) ) {
 			$add_args[ $flag ] = 1;
 		}
-	}
-
-	if ( $state['min_rating'] ) {
-		$add_args['min_rating'] = $state['min_rating'];
 	}
 
 	if ( ! empty( $state['filter_brand'] ) ) {
