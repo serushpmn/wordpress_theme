@@ -319,24 +319,27 @@ function almasland_apply_shop_filters( $query ) {
 		$query->set( 'meta_key', '' );
 	}
 
+	/*
+	 * In-stock filter: use product_visibility (WC 3+), not _stock_status meta.
+	 * Price range is handled natively by WooCommerce via min_price/max_price GET
+	 * params + lookup table clauses — do not add a second _price meta query.
+	 */
 	if ( $state['in_stock'] ) {
-		$meta_query[] = array(
-			'key'     => '_stock_status',
-			'value'   => 'instock',
-			'compare' => '=',
-		);
-		$tax_query[] = array(
-			'taxonomy' => 'product_visibility',
-			'field'    => 'name',
-			'terms'    => array( 'outofstock' ),
-			'operator' => 'NOT IN',
-		);
+		$visibility_term_ids = function_exists( 'wc_get_product_visibility_term_ids' ) ? wc_get_product_visibility_term_ids() : array();
+		if ( ! empty( $visibility_term_ids['outofstock'] ) ) {
+			$tax_query[] = array(
+				'taxonomy' => 'product_visibility',
+				'field'    => 'term_taxonomy_id',
+				'terms'    => array( (int) $visibility_term_ids['outofstock'] ),
+				'operator' => 'NOT IN',
+			);
+		}
 	}
 
 	if ( $state['fast_shipping'] ) {
 		$meta_query[] = array(
 			'key'     => '_almas_fixed_badges',
-			'value'   => 'express_delivery',
+			'value'   => '"express_delivery"',
 			'compare' => 'LIKE',
 		);
 	}
@@ -358,24 +361,6 @@ function almasland_apply_shop_filters( $query ) {
 		$query->set( 'post__in', $sale_ids );
 	}
 
-	if ( $state['min_price'] > 0 ) {
-		$meta_query[] = array(
-			'key'     => '_price',
-			'value'   => $state['min_price'],
-			'compare' => '>=',
-			'type'    => 'NUMERIC',
-		);
-	}
-
-	if ( $state['max_price'] > 0 ) {
-		$meta_query[] = array(
-			'key'     => '_price',
-			'value'   => $state['max_price'],
-			'compare' => '<=',
-			'type'    => 'NUMERIC',
-		);
-	}
-
 	if ( ! empty( $state['filter_brand'] ) ) {
 		$meta_brands = array();
 		$tax_brands  = array();
@@ -387,31 +372,68 @@ function almasland_apply_shop_filters( $query ) {
 			}
 		}
 
-		$brand_clauses = array();
-		if ( $meta_brands ) {
-			$brand_clauses[] = array(
-				'key'     => '_almas_brand',
-				'value'   => $meta_brands,
-				'compare' => 'IN',
-			);
-		}
-
 		$brand_taxonomy = almasland_get_brand_attribute_taxonomy();
-		if ( $tax_brands && $brand_taxonomy ) {
-			$tax_query[] = array(
-				'taxonomy' => $brand_taxonomy,
-				'field'    => 'slug',
-				'terms'    => $tax_brands,
-				'operator' => 'IN',
+		$brand_ids      = array();
+
+		if ( $meta_brands ) {
+			$meta_ids = get_posts(
+				array(
+					'post_type'              => 'product',
+					'post_status'            => 'publish',
+					'posts_per_page'         => -1,
+					'fields'                 => 'ids',
+					'no_found_rows'          => true,
+					'update_post_meta_cache' => false,
+					'update_post_term_cache' => false,
+					'meta_query'             => array(
+						array(
+							'key'     => '_almas_brand',
+							'value'   => $meta_brands,
+							'compare' => 'IN',
+						),
+					),
+				)
 			);
+			$brand_ids = array_merge( $brand_ids, array_map( 'absint', $meta_ids ) );
 		}
 
-		// Meta brands only — OR across selected brand names.
-		if ( count( $brand_clauses ) === 1 ) {
-			$meta_query[] = $brand_clauses[0];
-		} elseif ( count( $brand_clauses ) > 1 ) {
-			$meta_query[] = array_merge( array( 'relation' => 'OR' ), $brand_clauses );
+		if ( $tax_brands && $brand_taxonomy ) {
+			$tax_ids = get_posts(
+				array(
+					'post_type'              => 'product',
+					'post_status'            => 'publish',
+					'posts_per_page'         => -1,
+					'fields'                 => 'ids',
+					'no_found_rows'          => true,
+					'update_post_meta_cache' => false,
+					'update_post_term_cache' => false,
+					'tax_query'              => array(
+						array(
+							'taxonomy' => $brand_taxonomy,
+							'field'    => 'slug',
+							'terms'    => $tax_brands,
+							'operator' => 'IN',
+						),
+					),
+				)
+			);
+			$brand_ids = array_merge( $brand_ids, array_map( 'absint', $tax_ids ) );
 		}
+
+		$brand_ids = array_values( array_unique( array_filter( $brand_ids ) ) );
+		if ( empty( $brand_ids ) ) {
+			$brand_ids = array( 0 );
+		}
+
+		$existing_in = $query->get( 'post__in' );
+		if ( ! empty( $existing_in ) ) {
+			$brand_ids = array_values( array_intersect( array_map( 'absint', (array) $existing_in ), $brand_ids ) );
+			if ( empty( $brand_ids ) ) {
+				$brand_ids = array( 0 );
+			}
+		}
+
+		$query->set( 'post__in', $brand_ids );
 	}
 
 	if ( ! empty( $state['filter_cat'] ) ) {
@@ -453,6 +475,31 @@ function almasland_apply_shop_filters( $query ) {
 	}
 }
 add_action( 'woocommerce_product_query', 'almasland_apply_shop_filters', 20 );
+
+/**
+ * Drop empty/zero price query args before WooCommerce reads them.
+ *
+ * Empty number inputs still submit as "" which WC casts to 0 and then
+ * excludes almost every priced product from the catalog.
+ */
+function almasland_sanitize_shop_price_query_vars() {
+	if ( is_admin() ) {
+		return;
+	}
+
+	foreach ( array( 'min_price', 'max_price' ) as $key ) {
+		if ( ! isset( $_GET[ $key ] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+			continue;
+		}
+
+		$raw = wp_unslash( $_GET[ $key ] ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		if ( '' === $raw || ! is_numeric( $raw ) || (float) $raw <= 0 ) {
+			unset( $_GET[ $key ], $_REQUEST[ $key ] ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		}
+	}
+}
+add_action( 'parse_request', 'almasland_sanitize_shop_price_query_vars', 1 );
+add_action( 'init', 'almasland_sanitize_shop_price_query_vars', 1 );
 
 /**
  * Render custom result count.

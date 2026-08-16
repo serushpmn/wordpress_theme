@@ -9,7 +9,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'ALMASLAND_VERSION', '1.1.5' );
+define( 'ALMASLAND_VERSION', '1.1.6' );
 define( 'ALMASLAND_DIR', get_template_directory() );
 define( 'ALMASLAND_URI', get_template_directory_uri() );
 

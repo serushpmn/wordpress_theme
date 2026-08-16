@@ -281,6 +281,16 @@ document.querySelectorAll(".shop-filter-toggle input").forEach((input) => {
   syncToggleState();
 });
 
+const shopFilterForm = document.querySelector(".shop-filter-form");
+shopFilterForm?.addEventListener("submit", () => {
+  shopFilterForm.querySelectorAll('input[name="min_price"], input[name="max_price"]').forEach((input) => {
+    const value = String(input.value || "").trim();
+    if (!value || Number(value) <= 0) {
+      input.disabled = true;
+    }
+  });
+});
+
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") {
     setFilterState(false);
