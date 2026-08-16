@@ -81,7 +81,7 @@ $view_all_url = add_query_arg( 'on_sale', '1', wc_get_page_permalink( 'shop' ) )
 
 					<div class="front-page-offer-card__body">
 						<a class="front-page-offer-card__title" href="<?php echo esc_url( $product_link ); ?>">
-							<?php echo esc_html( $product->get_name() ); ?>
+							<?php echo esc_html( almasland_get_product_card_title( $product ) ); ?>
 						</a>
 
 						<?php if ( $summary ) : ?>

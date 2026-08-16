@@ -19,7 +19,7 @@ if ( function_exists( 'wc_get_loop_prop' ) && wc_get_loop_prop( 'almasland_swipe
 }
 
 $product_link = $product->get_permalink();
-$product_name = $product->get_name();
+$product_name = function_exists( 'almasland_get_product_card_title' ) ? almasland_get_product_card_title( $product ) : $product->get_name();
 $stock_label  = __( 'موجود', 'almas-land' );
 $price_html   = preg_replace( '/<span class="screen-reader-text">.*?<\/span>/u', '', $product->get_price_html() );
 

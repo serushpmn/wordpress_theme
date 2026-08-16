@@ -1229,7 +1229,7 @@ function almasland_get_home_catalog_card_html( $product ) {
 			<?php echo wp_kses_post( $product->get_image( 'almasland-card', array( 'loading' => 'lazy', 'decoding' => 'async' ) ) ); ?>
 		</span>
 		<span class="front-page-catalog-card__body">
-			<strong class="front-page-catalog-card__title"><?php echo esc_html( $product->get_name() ); ?></strong>
+			<strong class="front-page-catalog-card__title"><?php echo esc_html( almasland_get_product_card_title( $product ) ); ?></strong>
 			<?php if ( $summary ) : ?>
 				<span class="front-page-catalog-card__specs"><?php echo esc_html( $summary ); ?></span>
 			<?php endif; ?>

@@ -16,6 +16,11 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 function almasland_product_fields() {
 	return array(
+		'_almas_card_title'     => array(
+			'label'       => esc_html__( 'عنوان', 'almas-land' ),
+			'type'        => 'text',
+			'description' => esc_html__( 'عنوان کوتاه برای کارت‌های محصول (مثلاً: msi mini case 8 / 128). اگر خالی باشد، عنوان اصلی نمایش داده می‌شود.', 'almas-land' ),
+		),
 		'_almas_brand'          => array( 'label' => esc_html__( 'برند محصول', 'almas-land' ), 'type' => 'text' ),
 		'_almas_warranty'       => array( 'label' => esc_html__( 'گارانتی', 'almas-land' ), 'type' => 'text' ),
 		'_almas_cosmetic'       => array( 'label' => esc_html__( 'وضعیت ظاهری کالا', 'almas-land' ), 'type' => 'text' ),
@@ -99,6 +104,33 @@ function almasland_save_product_fields( $product ) {
 	delete_transient( 'almasland_shop_brand_options' );
 }
 add_action( 'woocommerce_admin_process_product_object', 'almasland_save_product_fields' );
+
+/**
+ * Card / loop display title. Falls back to the product name when empty.
+ *
+ * @param WC_Product|null $product Product.
+ * @return string
+ */
+function almasland_get_product_card_title( $product ) {
+	if ( ! $product instanceof WC_Product ) {
+		return '';
+	}
+
+	$source = $product;
+	if ( $product->is_type( 'variation' ) ) {
+		$parent = wc_get_product( $product->get_parent_id() );
+		if ( $parent ) {
+			$source = $parent;
+		}
+	}
+
+	$card_title = trim( (string) $source->get_meta( '_almas_card_title' ) );
+	if ( $card_title !== '' ) {
+		return $card_title;
+	}
+
+	return $product->get_name();
+}
 
 /**
  * Get WooCommerce attribute specs.
