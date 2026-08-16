@@ -1307,6 +1307,7 @@ main {
 .product-card--storefront .product-card__body {
   align-items: center;
   text-align: center;
+  justify-content: space-between;
   gap: 8px;
   padding-top: var(--space-2);
 }
@@ -7108,13 +7109,13 @@ p.no-comments {
 
 @media (max-width: 960px) {
   .woocommerce ul.products {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 
 @media (max-width: 520px) {
   .woocommerce ul.products {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 

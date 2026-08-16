@@ -878,6 +878,7 @@
   flex-direction: column;
   gap: 8px;
   min-width: 0;
+  justify-content: space-between;
 }
 
 .front-page-offer-card__title {
@@ -941,7 +942,7 @@
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 4px;
   margin-top: auto;
 }
 
@@ -1057,7 +1058,7 @@
   }
 
   .front-page-offer-card {
-    padding: 12px 12px 14px;
+    padding: 12px 4px 14px;
   }
 
   .front-page-offer-card__media {
@@ -1502,6 +1503,7 @@
   flex: 1;
   flex-direction: column;
   align-items: center;
+  justify-content: space-between;
   gap: 8px;
   width: 100%;
   min-width: 0;

@@ -1437,7 +1437,7 @@ function almasland_get_home_catalog_card_html( $product ) {
 						<span class="front-page-catalog-card__price"><?php echo wp_kses_post( almasland_format_card_price_html( $sale_price ) ); ?></span>
 					<?php endif; ?>
 					<?php if ( $regular_price > 0 && $regular_price > $sale_price ) : ?>
-						<span class="front-page-catalog-card__price-regular"><del><?php echo esc_html( almasland_format_plain_price( $regular_price ) ); ?></del><?php echo wp_kses_post( almasland_get_toman_icon_html() ); ?></span>
+						<span class="front-page-catalog-card__price-regular"><del><?php echo esc_html( almasland_format_plain_price( $regular_price ) ); ?></del></span>
 					<?php endif; ?>
 				</span>
 			<?php endif; ?>

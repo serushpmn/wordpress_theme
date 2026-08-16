@@ -107,7 +107,6 @@ $view_all_url = add_query_arg( 'on_sale', '1', wc_get_page_permalink( 'shop' ) )
 								<?php if ( $regular_price > 0 && $regular_price > $sale_price ) : ?>
 									<span class="front-page-offer-card__price-regular">
 										<del><?php echo esc_html( almasland_format_plain_price( $regular_price ) ); ?></del>
-										<?php echo wp_kses_post( almasland_get_toman_icon_html() ); ?>
 									</span>
 								<?php endif; ?>
 							</div>

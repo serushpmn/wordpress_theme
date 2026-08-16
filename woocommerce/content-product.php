@@ -69,7 +69,7 @@ if ( $grade && ! empty( $grade['bg'] ) ) {
 					<span class="product-card__price"><?php echo wp_kses_post( almasland_format_card_price_html( $sale_price ) ); ?></span>
 				<?php endif; ?>
 				<?php if ( $regular > 0 && $regular > $sale_price ) : ?>
-					<span class="product-card__price-regular"><del><?php echo esc_html( almasland_format_plain_price( $regular ) ); ?></del><?php echo wp_kses_post( almasland_get_toman_icon_html() ); ?></span>
+					<span class="product-card__price-regular"><del><?php echo esc_html( almasland_format_plain_price( $regular ) ); ?></del></span>
 				<?php endif; ?>
 			</div>
 		<?php endif; ?>
