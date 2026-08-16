@@ -60,6 +60,12 @@
 	<?php endif; ?>
 
 	<div class="container header-main">
+		<button class="menu-toggle" type="button" data-menu-toggle aria-controls="mobile-nav-panel" aria-expanded="false" aria-label="<?php esc_attr_e( 'باز کردن منو', 'almas-land' ); ?>">
+			<span class="menu-toggle__bar" aria-hidden="true"></span>
+			<span class="menu-toggle__bar" aria-hidden="true"></span>
+			<span class="menu-toggle__bar" aria-hidden="true"></span>
+		</button>
+
 		<?php almasland_site_logo(); ?>
 
 		<?php get_search_form(); ?>
@@ -70,14 +76,18 @@
 				<span><?php esc_html_e( 'ورود / ثبت‌نام', 'almas-land' ); ?></span>
 			</a>
 			<?php almasland_header_cart(); ?>
-			<button class="menu-toggle" type="button" data-menu-toggle aria-controls="site-menu" aria-expanded="false" aria-label="<?php esc_attr_e( 'باز کردن منو', 'almas-land' ); ?>">
-				<span></span><span></span><span></span>
-			</button>
 		</div>
 	</div>
 
-	<div class="header-nav">
-		<div class="container header-nav__inner">
+	<div class="header-nav" id="site-menu" data-mobile-nav>
+		<button type="button" class="header-nav__backdrop" data-menu-close tabindex="-1" aria-label="<?php esc_attr_e( 'بستن منو', 'almas-land' ); ?>"></button>
+		<div class="header-nav__inner container" id="mobile-nav-panel">
+			<div class="mobile-nav-head">
+				<strong><?php esc_html_e( 'منو', 'almas-land' ); ?></strong>
+				<button type="button" class="mobile-nav-close" data-menu-close aria-label="<?php esc_attr_e( 'بستن منو', 'almas-land' ); ?>">
+					<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+				</button>
+			</div>
 			<?php
 			$shop_url = class_exists( 'WooCommerce' ) ? wc_get_page_permalink( 'shop' ) : home_url( '/' );
 			$nav_cats = function_exists( 'almasland_get_home_catalog_categories' ) ? almasland_get_home_catalog_categories( 8 ) : array();
@@ -110,7 +120,7 @@
 				</div>
 			</div>
 
-			<nav class="main-nav" id="site-menu" aria-label="<?php esc_attr_e( 'منوی اصلی', 'almas-land' ); ?>">
+			<nav class="main-nav" aria-label="<?php esc_attr_e( 'منوی اصلی', 'almas-land' ); ?>">
 				<?php
 				wp_nav_menu(
 					array(

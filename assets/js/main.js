@@ -38,7 +38,7 @@ if (headerActions) {
     <svg class="theme-toggle__moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 14.4A8.2 8.2 0 0 1 9.6 3a8.6 8.6 0 1 0 11.4 11.4Z"/></svg>
     <svg class="theme-toggle__sun" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 18a6 6 0 1 0 0-12 6 6 0 0 0 0 12Zm0 4a1 1 0 0 1-1-1v-1.2h2V21a1 1 0 0 1-1 1Zm0-17.8h-1V3a1 1 0 1 1 2 0v1.2h-1ZM4.2 13H3a1 1 0 1 1 0-2h1.2v2ZM21 13h-1.2v-2H21a1 1 0 1 1 0 2ZM6.3 7.7 5.5 6.9a1 1 0 0 1 1.4-1.4l.8.8-1.4 1.4Zm11.2 11.2-.8-.8 1.4-1.4.8.8a1 1 0 0 1-1.4 1.4Zm-.8-12.6.8-.8a1 1 0 1 1 1.4 1.4l-.8.8-1.4-1.4ZM5.5 17.5l.8-.8 1.4 1.4-.8.8a1 1 0 0 1-1.4-1.4Z"/></svg>
   `;
-  headerActions.insertBefore(themeToggle, menuToggle || headerActions.firstChild);
+  headerActions.insertBefore(themeToggle, headerActions.firstChild);
 
   themeToggle.addEventListener("click", () => {
     const nextTheme = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
@@ -84,10 +84,67 @@ function updateFloatingContactHref() {
 updateFloatingContactHref();
 mobileContactQuery?.addEventListener?.("change", updateFloatingContactHref);
 
+function setMobileNavOpen(isOpen) {
+  if (!siteMenu || !menuToggle) return;
+
+  siteMenu.classList.toggle("is-open", isOpen);
+  document.body.classList.toggle("is-mobile-nav-open", isOpen);
+  menuToggle.setAttribute("aria-expanded", String(isOpen));
+  menuToggle.setAttribute(
+    "aria-label",
+    isOpen ? "بستن منو" : "باز کردن منو"
+  );
+
+  const panel = siteMenu.querySelector("#mobile-nav-panel");
+  if (panel) {
+    if (isOpen) {
+      panel.setAttribute("role", "dialog");
+      panel.setAttribute("aria-modal", "true");
+      panel.setAttribute("aria-label", "منوی سایت");
+    } else {
+      panel.removeAttribute("role");
+      panel.removeAttribute("aria-modal");
+      panel.removeAttribute("aria-label");
+    }
+  }
+
+  if (isOpen) {
+    const closeBtn = siteMenu.querySelector(".mobile-nav-close");
+    closeBtn?.focus?.({ preventScroll: true });
+  } else {
+    menuToggle.focus?.({ preventScroll: true });
+  }
+}
+
 if (menuToggle && siteMenu) {
   menuToggle.addEventListener("click", () => {
-    const isOpen = siteMenu.classList.toggle("is-open");
-    menuToggle.setAttribute("aria-expanded", String(isOpen));
+    setMobileNavOpen(!siteMenu.classList.contains("is-open"));
+  });
+
+  siteMenu.querySelectorAll("[data-menu-close]").forEach((el) => {
+    el.addEventListener("click", () => setMobileNavOpen(false));
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && siteMenu.classList.contains("is-open")) {
+      setMobileNavOpen(false);
+    }
+  });
+
+  siteMenu.querySelectorAll("a[href]").forEach((link) => {
+    link.addEventListener("click", () => {
+      if (!window.matchMedia("(max-width: 960px)").matches) return;
+      if (link.parentElement?.classList.contains("menu-item-has-children")) {
+        return;
+      }
+      setMobileNavOpen(false);
+    });
+  });
+
+  window.matchMedia("(max-width: 960px)").addEventListener?.("change", (event) => {
+    if (!event.matches) {
+      setMobileNavOpen(false);
+    }
   });
 }
 
