@@ -266,15 +266,25 @@ add_action( 'woocommerce_after_single_product_summary', 'almasland_output_relate
  * Cart page header.
  */
 function almasland_cart_header() {
+	$is_saved_view = function_exists( 'almasland_is_saved_cart_view' ) && almasland_is_saved_cart_view();
+	$cart_count    = WC()->cart ? WC()->cart->get_cart_contents_count() : 0;
+	$saved_count   = function_exists( 'almasland_get_saved_cart_count' ) ? almasland_get_saved_cart_count() : 0;
+	$cart_url      = wc_get_cart_url();
+	$saved_url     = function_exists( 'almasland_get_saved_cart_url' ) ? almasland_get_saved_cart_url() : $cart_url;
 	?>
 	<div class="cart-header cart-header--compact">
-		<div class="cart-header__title">
-			<h1><?php esc_html_e( 'سبد خرید', 'almas-land' ); ?></h1>
-			<span><?php echo esc_html( almasland_persian_digits( WC()->cart ? WC()->cart->get_cart_contents_count() : 0 ) ); ?></span>
+		<div class="cart-header__title<?php echo $is_saved_view ? '' : ' is-active'; ?>">
+			<a href="<?php echo esc_url( $cart_url ); ?>">
+				<h1><?php esc_html_e( 'سبد خرید', 'almas-land' ); ?></h1>
+				<span><?php echo esc_html( almasland_persian_digits( $cart_count ) ); ?></span>
+			</a>
 		</div>
 		<div class="cart-header__future">
 			<span aria-hidden="true">/</span>
-			<a href="<?php echo esc_url( wc_get_cart_url() ); ?>"><?php esc_html_e( 'سبد خرید آینده', 'almas-land' ); ?> <small><?php echo esc_html( '(' . almasland_persian_digits( 0 ) . ')' ); ?></small></a>
+			<a class="<?php echo $is_saved_view ? 'is-active' : ''; ?>" href="<?php echo esc_url( $saved_url ); ?>">
+				<?php esc_html_e( 'سبد خرید آینده', 'almas-land' ); ?>
+				<small><?php echo esc_html( '(' . almasland_persian_digits( $saved_count ) . ')' ); ?></small>
+			</a>
 		</div>
 	</div>
 	<?php

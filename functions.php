@@ -9,7 +9,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'ALMASLAND_VERSION', '1.2.7' );
+define( 'ALMASLAND_VERSION', '1.3.0' );
 define( 'ALMASLAND_DIR', get_template_directory() );
 define( 'ALMASLAND_URI', get_template_directory_uri() );
 
@@ -22,6 +22,7 @@ if ( class_exists( 'WooCommerce' ) ) {
 	require ALMASLAND_DIR . '/inc/product-fields.php';
 	require ALMASLAND_DIR . '/inc/product-badges.php';
 	require ALMASLAND_DIR . '/inc/shop-filters.php';
+	require ALMASLAND_DIR . '/inc/cart-save-for-later.php';
 	require ALMASLAND_DIR . '/inc/woocommerce.php';
 	require ALMASLAND_DIR . '/inc/checkout-fields.php';
 }
@@ -167,6 +168,7 @@ function almasland_enqueue_assets() {
 			'phoneDisplay' => sanitize_text_field( almasland_get_option( 'phone', '۰۲۱-۸۸۸۸۶۹۵۹' ) ),
 			'phoneTel'     => preg_replace( '/[^0-9+]/', '', almasland_get_option( 'phone', '02188886959' ) ),
 			'notifyPopup'  => almasland_get_notify_popup_config(),
+			'cartChoiceDismiss' => 4,
 		)
 	);
 

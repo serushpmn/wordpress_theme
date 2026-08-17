@@ -8,8 +8,120 @@
 defined( 'ABSPATH' ) || exit;
 
 do_action( 'woocommerce_before_cart' );
+
+$is_saved_view = function_exists( 'almasland_is_saved_cart_view' ) && almasland_is_saved_cart_view();
+$saved_items   = $is_saved_view && function_exists( 'almasland_get_saved_cart_items' ) ? almasland_get_saved_cart_items() : array();
 ?>
 <div class="cart-layout">
+	<?php if ( $is_saved_view ) : ?>
+		<div class="cart-items cart-items--saved">
+			<?php if ( empty( $saved_items ) ) : ?>
+				<div class="cart-empty-state">
+					<p><?php esc_html_e( 'سبد خرید آینده شما خالی است.', 'almas-land' ); ?></p>
+					<a class="btn btn--primary" href="<?php echo esc_url( wc_get_page_permalink( 'shop' ) ); ?>"><?php esc_html_e( 'بازگشت به فروشگاه', 'almas-land' ); ?></a>
+				</div>
+			<?php else : ?>
+				<?php foreach ( $saved_items as $saved_item_key => $saved_item ) : ?>
+					<?php
+					$product_id   = (int) ( $saved_item['product_id'] ?? 0 );
+					$variation_id = (int) ( $saved_item['variation_id'] ?? 0 );
+					$_product     = wc_get_product( $variation_id ? $variation_id : $product_id );
+
+					if ( ! $_product || ! $_product->exists() ) {
+						continue;
+					}
+
+					$cart_item         = array(
+						'product_id'   => $product_id,
+						'variation_id' => $variation_id,
+						'variation'    => $saved_item['variation'] ?? array(),
+						'quantity'     => (int) ( $saved_item['quantity'] ?? 1 ),
+					);
+					$product_name      = $_product->get_name();
+					$product_permalink = $_product->is_visible() ? $_product->get_permalink() : '';
+					$product_thumbnail = $_product->get_image( 'woocommerce_thumbnail' );
+					$product_features  = function_exists( 'almasland_get_cart_item_features' ) ? almasland_get_cart_item_features( $cart_item, $_product ) : array();
+					$item_qty          = (int) $cart_item['quantity'];
+					$regular_price     = (float) $_product->get_regular_price();
+					$current_price     = (float) $_product->get_price();
+					$discount_percent  = $regular_price > 0 && $current_price > 0 && $current_price < $regular_price ? (int) round( ( ( $regular_price - $current_price ) / $regular_price ) * 100 ) : 0;
+					$product_subtotal  = almasland_persian_price( wc_price( $current_price * $item_qty ) );
+					$move_url          = wp_nonce_url(
+						add_query_arg( 'almas_move_to_cart', $saved_item_key, wc_get_cart_url() ),
+						'almas-move-to-cart-' . $saved_item_key
+					);
+					$remove_url        = wp_nonce_url(
+						add_query_arg( 'almas_remove_saved', $saved_item_key, almasland_get_saved_cart_url() ),
+						'almas-remove-saved-' . $saved_item_key
+					);
+					?>
+					<div class="cart-item cart-item--saved">
+						<div class="cart-item__aside">
+							<div class="cart-item__media">
+								<?php if ( $product_permalink ) : ?>
+									<a href="<?php echo esc_url( $product_permalink ); ?>">
+										<?php echo wp_kses_post( $product_thumbnail ); ?>
+									</a>
+								<?php else : ?>
+									<?php echo wp_kses_post( $product_thumbnail ); ?>
+								<?php endif; ?>
+							</div>
+
+							<div class="cart-item__quantity quantity-control quantity-control--locked" data-qty-locked="true" aria-label="<?php esc_attr_e( 'تعداد محصول', 'almas-land' ); ?>">
+								<a role="button" href="<?php echo esc_url( $remove_url ); ?>" class="cart-item__remove remove-button" aria-label="<?php echo esc_attr( sprintf( __( 'حذف %s از سبد خرید آینده', 'almas-land' ), wp_strip_all_tags( $product_name ) ) ); ?>">
+									<svg class="cart-item__remove-icon" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M9 3h6l1 2h4v2H4V5h4l1-2Zm1 6h2v9h-2V9Zm4 0h2v9h-2V9ZM7 9h2v9H7V9Zm-1 12h12l1-12H5l1 12Z"/></svg>
+									<span class="screen-reader-text"><?php esc_html_e( 'حذف', 'almas-land' ); ?></span>
+								</a>
+								<div class="quantity">
+									<label class="screen-reader-text" for="saved-qty-<?php echo esc_attr( $saved_item_key ); ?>"><?php esc_html_e( 'تعداد', 'almas-land' ); ?></label>
+									<input type="text" id="saved-qty-<?php echo esc_attr( $saved_item_key ); ?>" class="input-text qty text qty-locked" value="<?php echo esc_attr( almasland_persian_digits( (string) $item_qty ) ); ?>" readonly>
+								</div>
+							</div>
+						</div>
+
+						<div class="cart-item__main">
+							<div class="cart-item__info">
+								<h2>
+									<?php
+									if ( $product_permalink ) {
+										printf( '<a href="%s">%s</a>', esc_url( $product_permalink ), esc_html( $product_name ) );
+									} else {
+										echo esc_html( $product_name );
+									}
+									?>
+								</h2>
+
+								<?php if ( $product_features ) : ?>
+									<ul class="cart-item__features" aria-label="<?php esc_attr_e( 'ویژگی‌های محصول', 'almas-land' ); ?>">
+										<?php foreach ( $product_features as $feature ) : ?>
+											<li>
+												<span><?php echo esc_html( $feature['label'] ); ?></span>
+												<strong><?php echo esc_html( $feature['value'] ); ?></strong>
+											</li>
+										<?php endforeach; ?>
+									</ul>
+								<?php endif; ?>
+							</div>
+
+							<div class="cart-item__pricing">
+								<strong class="cart-item__price"><?php echo wp_kses_post( $product_subtotal ); ?></strong>
+								<?php if ( $discount_percent ) : ?>
+									<div class="cart-item__sale">
+										<del><?php echo wp_kses_post( almasland_persian_price( wc_price( $regular_price * $item_qty ) ) ); ?></del>
+										<span><?php echo esc_html( almasland_persian_digits( (string) $discount_percent ) ); ?>٪</span>
+									</div>
+								<?php endif; ?>
+							</div>
+
+							<div class="cart-item__footer">
+								<a class="cart-item__later" href="<?php echo esc_url( $move_url ); ?>"><?php esc_html_e( 'افزودن به سبد خرید', 'almas-land' ); ?></a>
+							</div>
+						</div>
+					</div>
+				<?php endforeach; ?>
+			<?php endif; ?>
+		</div>
+	<?php else : ?>
 	<form class="woocommerce-cart-form cart-items" action="<?php echo esc_url( wc_get_cart_url() ); ?>" method="post">
 		<?php do_action( 'woocommerce_before_cart_table' ); ?>
 
@@ -35,6 +147,10 @@ do_action( 'woocommerce_before_cart' );
 			$discount_percent  = $regular_price > 0 && $current_price > 0 && $current_price < $regular_price ? (int) round( ( ( $regular_price - $current_price ) / $regular_price ) * 100 ) : 0;
 			$item_qty          = (int) $cart_item['quantity'];
 			$quantity_locked   = almasland_is_cart_quantity_locked( $_product );
+			$save_later_url    = wp_nonce_url(
+				add_query_arg( 'almas_save_item', $cart_item_key, wc_get_cart_url() ),
+				'almas-save-item-' . $cart_item_key
+			);
 			?>
 			<div class="cart-item <?php echo esc_attr( apply_filters( 'woocommerce_cart_item_class', 'cart_item', $cart_item, $cart_item_key ) ); ?>">
 				<div class="cart-item__aside">
@@ -132,7 +248,7 @@ do_action( 'woocommerce_before_cart' );
 					</div>
 
 					<div class="cart-item__footer">
-						<a class="cart-item__later" href="<?php echo esc_url( wc_get_cart_url() ); ?>"><?php esc_html_e( 'بعدا می‌خرم', 'almas-land' ); ?></a>
+						<a class="cart-item__later" href="<?php echo esc_url( $save_later_url ); ?>"><?php esc_html_e( 'بعدا می‌خرم', 'almas-land' ); ?></a>
 					</div>
 				</div>
 			</div>
@@ -141,7 +257,7 @@ do_action( 'woocommerce_before_cart' );
 		<?php do_action( 'woocommerce_cart_contents' ); ?>
 
 		<div class="cart-actions-panel">
-			<a class="cart-action-link" href="<?php echo esc_url( wc_get_cart_url() ); ?>"><?php esc_html_e( 'انتقال همه به سبد خرید آینده', 'almas-land' ); ?></a>
+			<a class="cart-action-link" href="<?php echo esc_url( wp_nonce_url( add_query_arg( 'almas_save_all', '1', wc_get_cart_url() ), 'almas-save-all' ) ); ?>"><?php esc_html_e( 'انتقال همه به سبد خرید آینده', 'almas-land' ); ?></a>
 			<a class="cart-action-link" href="<?php echo esc_url( wp_nonce_url( add_query_arg( 'almas_empty_cart', '1', wc_get_cart_url() ), 'almas-empty-cart' ) ); ?>"><?php esc_html_e( 'حذف همه محصولات سبد خرید', 'almas-land' ); ?></a>
 			<button type="submit" class="btn cart-update-button" name="update_cart" value="<?php esc_attr_e( 'بروزرسانی سبد خرید', 'almas-land' ); ?>" disabled><?php esc_html_e( 'بروزرسانی سبد خرید', 'almas-land' ); ?></button>
 			<?php do_action( 'woocommerce_cart_actions' ); ?>
@@ -151,15 +267,18 @@ do_action( 'woocommerce_before_cart' );
 		<?php do_action( 'woocommerce_after_cart_contents' ); ?>
 		<?php do_action( 'woocommerce_after_cart_table' ); ?>
 	</form>
+	<?php endif; ?>
 
-	<?php do_action( 'woocommerce_before_cart_collaterals' ); ?>
+	<?php if ( ! $is_saved_view ) : ?>
+		<?php do_action( 'woocommerce_before_cart_collaterals' ); ?>
 
-	<div class="cart-collaterals cart-layout__collaterals">
-		<?php do_action( 'woocommerce_cart_collaterals' ); ?>
-	</div>
+		<div class="cart-collaterals cart-layout__collaterals">
+			<?php do_action( 'woocommerce_cart_collaterals' ); ?>
+		</div>
+	<?php endif; ?>
 </div>
 
-<?php if ( ! WC()->cart->is_empty() ) : ?>
+<?php if ( ! $is_saved_view && ! WC()->cart->is_empty() ) : ?>
 	<div class="cart-sticky-bar" aria-label="<?php esc_attr_e( 'ثبت سفارش سریع', 'almas-land' ); ?>">
 		<div class="cart-sticky-bar__total">
 			<span><?php esc_html_e( 'جمع کل', 'almas-land' ); ?></span>

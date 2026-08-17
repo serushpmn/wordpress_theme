@@ -892,13 +892,13 @@ function almasland_get_home_why_section() {
 
 	return array(
 		'title'       => __( 'چرا الماس لند؟', 'almas-land' ),
-		'text'        => __( 'با بیش از ۵ سال تجربه در فروش لپ‌تاپ و محصولات دیجیتال، الماس لند همراه مطمئن شما در خرید هوشمندانه است. تمام محصولات با تست دقیق و ضمانت کتبی ارائه می‌شوند.', 'almas-land' ),
+		'text'        => __( 'با بیش از ۲ سال تجربه در فروش لپ‌تاپ و محصولات دیجیتال، الماس لند همراه مطمئن شما در خرید هوشمندانه است. تمام محصولات با تست دقیق و ضمانت کتبی ارائه می‌شوند.', 'almas-land' ),
 		'image'       => $image_url,
 		'image_alt'   => __( 'خرید مطمئن از الماس لند', 'almas-land' ),
 		'stats'       => array(
 			array(
 				'icon'          => almasland_get_home_why_icon( 'customers' ),
-				'title'         => almasland_persian_digits( '۱۰,۰۰۰+' ),
+				'title'         => almasland_persian_digits( '۵۰۰+' ),
 				'subtitle'      => __( 'مشتریان راضی', 'almas-land' ),
 				'tooltip_mode'  => 'hover-click',
 				'tooltip_id'    => 'front-page-why-customers',
@@ -907,7 +907,7 @@ function almasland_get_home_why_section() {
 			),
 			array(
 				'icon'          => almasland_get_home_why_icon( 'years' ),
-				'title'         => almasland_persian_digits( '۵ سال' ),
+				'title'         => almasland_persian_digits( '۲ سال' ),
 				'subtitle'      => __( 'سابقه فعالیت', 'almas-land' ),
 				'tooltip_mode'  => 'click',
 				'tooltip_id'    => 'front-page-why-years',
@@ -1265,7 +1265,7 @@ function almasland_render_product_card_tags( $product, $grade = null, $grade_sty
 	}
 
 	if ( $color_html ) {
-		echo wp_kses_post( $color_html );
+		echo $color_html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped in renderer.
 	}
 
 	echo '</div>';

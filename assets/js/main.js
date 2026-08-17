@@ -534,13 +534,32 @@ function getCartChoiceModal() {
   return modal;
 }
 
+let cartChoiceAutoCloseTimer = null;
+
+function scheduleCartChoiceAutoClose() {
+  if (cartChoiceAutoCloseTimer) {
+    clearTimeout(cartChoiceAutoCloseTimer);
+  }
+
+  const dismissSeconds = Math.max(1, Number(themeConfig.cartChoiceDismiss) || 4);
+  cartChoiceAutoCloseTimer = window.setTimeout(() => {
+    closeCartChoiceModal();
+  }, dismissSeconds * 1000);
+}
+
 function openCartChoiceModal() {
   const modal = getCartChoiceModal();
   modal.classList.add("is-open");
   document.body.classList.add("is-modal-open");
+  scheduleCartChoiceAutoClose();
 }
 
 function closeCartChoiceModal() {
+  if (cartChoiceAutoCloseTimer) {
+    clearTimeout(cartChoiceAutoCloseTimer);
+    cartChoiceAutoCloseTimer = null;
+  }
+
   const modal = document.getElementById("cart-choice-modal");
   if (!modal) {
     return;
@@ -1092,6 +1111,80 @@ function initFrontPageTrustTooltips() {
   });
 }
 
+function initProductColorTooltips() {
+  const swatches = [...document.querySelectorAll("[data-color-tooltip]")];
+  if (!swatches.length) {
+    return;
+  }
+
+  const closeAll = (except) => {
+    swatches.forEach((swatch) => {
+      if (swatch === except) return;
+      swatch.classList.remove("is-tooltip-open", "is-tooltip-pinned");
+      swatch.setAttribute("aria-expanded", "false");
+    });
+  };
+
+  const showTooltip = (swatch) => {
+    closeAll(swatch);
+    swatch.classList.add("is-tooltip-open");
+    swatch.setAttribute("aria-expanded", "true");
+  };
+
+  const hideTooltip = (swatch) => {
+    if (swatch.classList.contains("is-tooltip-pinned")) {
+      return;
+    }
+    swatch.classList.remove("is-tooltip-open");
+    swatch.setAttribute("aria-expanded", "false");
+  };
+
+  swatches.forEach((swatch) => {
+    swatch.addEventListener("mouseenter", () => showTooltip(swatch));
+    swatch.addEventListener("mouseleave", () => hideTooltip(swatch));
+    swatch.addEventListener("focus", () => showTooltip(swatch));
+    swatch.addEventListener("blur", () => {
+      if (!swatch.classList.contains("is-tooltip-pinned")) {
+        hideTooltip(swatch);
+      }
+    });
+    swatch.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      if (swatch.classList.contains("is-tooltip-pinned")) {
+        swatch.classList.remove("is-tooltip-pinned");
+        hideTooltip(swatch);
+        return;
+      }
+      swatch.classList.add("is-tooltip-pinned");
+      showTooltip(swatch);
+    });
+    swatch.addEventListener("keydown", (event) => {
+      if (event.key !== "Enter" && event.key !== " ") {
+        return;
+      }
+      event.preventDefault();
+      swatch.click();
+    });
+  });
+
+  document.addEventListener("click", (event) => {
+    if (event.target.closest("[data-color-tooltip]")) {
+      return;
+    }
+    swatches.forEach((swatch) => {
+      swatch.classList.remove("is-tooltip-pinned");
+      hideTooltip(swatch);
+    });
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      closeAll();
+    }
+  });
+}
+
 async function addProductIdToCartAjax(productId) {
   const payload = new FormData();
   payload.append("product_id", productId);
@@ -1319,6 +1412,7 @@ function initFrontPageCatalogFilters() {
 }
 
 initFrontPageTrustTooltips();
+initProductColorTooltips();
 initFrontPageOfferCartButtons();
 initFrontPageHeroSwiper();
 initFrontPageSpecialOffersSwiper();

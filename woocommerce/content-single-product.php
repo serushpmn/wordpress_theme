@@ -140,11 +140,7 @@ $contact_phone    = almasland_get_phone_tel();
 								<p><?php esc_html_e( 'ما به شفافیت در فروش اعتماد داریم. هر دستگاه قبل از فروش به صورت کامل بررسی و تست می‌شود.', 'almas-land' ); ?></p>
 							</div>
 						</div>
-						<div class="product-info-apsb__legend" aria-label="<?php esc_attr_e( 'راهنمای وضعیت‌ها', 'almas-land' ); ?>">
-							<span class="product-info-apsb__legend-item product-info-apsb__legend-item--good"><?php esc_html_e( 'سالم / تأیید شده', 'almas-land' ); ?></span>
-							<span class="product-info-apsb__legend-item product-info-apsb__legend-item--attention"><?php esc_html_e( 'نیازمند توجه', 'almas-land' ); ?></span>
-							<span class="product-info-apsb__legend-item product-info-apsb__legend-item--problem"><?php esc_html_e( 'دارای مشکل', 'almas-land' ); ?></span>
-						</div>
+						
 					</div>
 				</section>
 			<?php else : ?>

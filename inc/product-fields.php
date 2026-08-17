@@ -175,17 +175,13 @@ function almasland_render_product_color_swatch( $product, $args = array() ) {
 
 	$size_class = sanitize_html_class( 'product-color-swatch--' . $args['size'] );
 	$classes    = trim( $args['class'] . ' ' . $size_class );
-	$aria_label = sprintf(
-		/* translators: %s: color hex code */
-		__( 'رنگ محصول: %s', 'almas-land' ),
-		$color
-	);
+	$color_name = __( 'رنگ محصول', 'almas-land' );
 
 	$swatch = sprintf(
-		'<span class="%1$s" style="background-color:%2$s;" title="%3$s" aria-hidden="true"></span>',
+		'<span class="%1$s" style="background-color:%2$s;" data-color-tooltip="%3$s" tabindex="0" role="button" aria-label="%3$s" aria-expanded="false"></span>',
 		esc_attr( $classes ),
 		esc_attr( $color ),
-		esc_attr( $aria_label )
+		esc_attr( $color_name )
 	);
 
 	if ( ! $args['show_label'] ) {
@@ -193,10 +189,9 @@ function almasland_render_product_color_swatch( $product, $args = array() ) {
 	}
 
 	return sprintf(
-		'<span class="product-color-display"><span class="product-color-display__label">%1$s</span>%2$s<span class="screen-reader-text">%3$s</span></span>',
+		'<span class="product-color-display"><span class="product-color-display__label">%1$s</span>%2$s</span>',
 		esc_html( $args['label'] ),
-		$swatch,
-		esc_html( $aria_label )
+		$swatch
 	);
 }
 
