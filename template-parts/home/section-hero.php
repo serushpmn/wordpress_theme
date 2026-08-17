@@ -1,64 +1,74 @@
 <?php
 /**
- * Front page hero section.
+ * Front page hero slider.
  *
  * @package AlmasLand
  */
 
-$hero = function_exists( 'almasland_get_home_hero' ) ? almasland_get_home_hero() : null;
+$slides   = function_exists( 'almasland_get_home_hero_slides' ) ? almasland_get_home_hero_slides() : array();
+$settings = function_exists( 'almasland_get_home_hero_slider_settings' ) ? almasland_get_home_hero_slider_settings() : array( 'autoplay' => true, 'interval' => 5000 );
 
-if ( ! $hero ) {
+if ( empty( $slides ) ) {
 	return;
 }
 
-$has_image  = ! empty( $hero['images']['desktop'] );
-$hero_class = 'front-page-hero' . ( $has_image ? '' : ' front-page-hero--placeholder' );
-$link       = $hero['link'] ? $hero['link'] : '';
+$slide_count = count( $slides );
+$is_slider   = $slide_count > 1;
 ?>
-<section class="front-page-hero-section" aria-label="<?php esc_attr_e( 'بنر اصلی', 'almas-land' ); ?>">
-	<<?php echo $link ? 'a' : 'div'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
-		class="<?php echo esc_attr( $hero_class ); ?>"
-		<?php if ( $link ) : ?>
-			href="<?php echo esc_url( $link ); ?>"
+<section
+	class="front-page-hero-section<?php echo $is_slider ? ' front-page-hero-section--slider' : ''; ?>"
+	aria-label="<?php esc_attr_e( 'اسلایدر بنر اصلی', 'almas-land' ); ?>"
+>
+	<div
+		class="front-page-hero-swiper swiper"
+		<?php if ( $is_slider ) : ?>
+			data-hero-swiper
+			data-autoplay="<?php echo ! empty( $settings['autoplay'] ) ? 'true' : 'false'; ?>"
+			data-interval="<?php echo esc_attr( (string) absint( $settings['interval'] ) ); ?>"
 		<?php endif; ?>
 	>
-		<div class="front-page-hero__media" aria-hidden="true">
-			<?php if ( $has_image ) : ?>
-				<picture>
-					<?php if ( ! empty( $hero['images']['mobile'] ) ) : ?>
-						<source media="(max-width: 767px)" srcset="<?php echo esc_url( $hero['images']['mobile'] ); ?>">
-					<?php endif; ?>
-					<?php if ( ! empty( $hero['images']['tablet'] ) ) : ?>
-						<source media="(max-width: 1023px)" srcset="<?php echo esc_url( $hero['images']['tablet'] ); ?>">
-					<?php endif; ?>
-					<img
-						src="<?php echo esc_url( $hero['images']['desktop'] ); ?>"
-						alt="<?php echo esc_attr( $hero['title'] ); ?>"
-						width="1100"
-						height="500"
-						decoding="async"
-						fetchpriority="high"
+		<div class="swiper-wrapper">
+			<?php foreach ( $slides as $index => $slide ) : ?>
+				<?php
+				$link = ! empty( $slide['link'] ) ? $slide['link'] : '';
+				$tag  = $link ? 'a' : 'div';
+				?>
+				<div class="swiper-slide">
+					<<?php echo $tag; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+						class="front-page-hero"
+						<?php if ( $link ) : ?>
+							href="<?php echo esc_url( $link ); ?>"
+						<?php endif; ?>
 					>
-				</picture>
-			<?php endif; ?>
+						<div class="front-page-hero__media">
+							<picture>
+								<?php if ( ! empty( $slide['images']['mobile'] ) ) : ?>
+									<source media="(max-width: 767px)" srcset="<?php echo esc_url( $slide['images']['mobile'] ); ?>">
+								<?php endif; ?>
+								<img
+									src="<?php echo esc_url( $slide['images']['desktop'] ); ?>"
+									alt="<?php echo esc_attr( $slide['alt'] ); ?>"
+									width="1300"
+									height="400"
+									loading="<?php echo 0 === $index ? 'eager' : 'lazy'; ?>"
+									decoding="async"
+									<?php echo 0 === $index ? 'fetchpriority="high"' : ''; ?>
+								>
+							</picture>
+						</div>
+					</<?php echo $tag; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>>
+				</div>
+			<?php endforeach; ?>
 		</div>
 
-		<span class="front-page-hero__shimmer" aria-hidden="true"></span>
-
-		<div class="front-page-hero__content">
-			<?php if ( $hero['title'] ) : ?>
-				<h1 class="front-page-hero__title"><?php echo esc_html( $hero['title'] ); ?></h1>
-			<?php endif; ?>
-
-			<?php if ( $hero['text'] ) : ?>
-				<p class="front-page-hero__text"><?php echo wp_kses_post( $hero['text'] ); ?></p>
-			<?php endif; ?>
-
-			<?php if ( $hero['button_text'] && ! $link ) : ?>
-				<span class="btn btn--primary front-page-hero__cta"><?php echo esc_html( $hero['button_text'] ); ?></span>
-			<?php elseif ( $hero['button_text'] && $link ) : ?>
-				<span class="btn btn--primary front-page-hero__cta"><?php echo esc_html( $hero['button_text'] ); ?></span>
-			<?php endif; ?>
-		</div>
-	</<?php echo $link ? 'a' : 'div'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>>
+		<?php if ( $is_slider ) : ?>
+			<button type="button" class="front-page-hero-swiper__arrow front-page-hero-swiper__arrow--prev swiper-button-prev" aria-label="<?php esc_attr_e( 'اسلاید قبلی', 'almas-land' ); ?>">
+				<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M15 6 9 12l6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+			</button>
+			<button type="button" class="front-page-hero-swiper__arrow front-page-hero-swiper__arrow--next swiper-button-next" aria-label="<?php esc_attr_e( 'اسلاید بعدی', 'almas-land' ); ?>">
+				<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m9 6 6 6-6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+			</button>
+			<div class="front-page-hero-swiper__pagination swiper-pagination"></div>
+		<?php endif; ?>
+	</div>
 </section>

@@ -606,109 +606,114 @@ function almasland_related_posts( $limit = 3 ) {
 }
 
 /**
- * Enabled slider items from panel.
+ * Enabled hero slides from panel.
  *
  * @return array<int, array<string, mixed>>
  */
-function almasland_get_enabled_sliders() {
-	$sliders = almasland_get_panel_settings()['sliders'];
+function almasland_get_home_hero_slides() {
+	$homepage = almasland_get_panel_settings()['homepage'];
+
+	if ( empty( $homepage['hero_enabled'] ) ) {
+		return array();
+	}
+
+	$slides = isset( $homepage['hero_slides'] ) && is_array( $homepage['hero_slides'] ) ? $homepage['hero_slides'] : array();
 
 	return array_values(
 		array_filter(
-			$sliders,
-			static function ( $slide ) {
-				return ! empty( $slide['enabled'] ) && ! empty( $slide['image'] );
-			}
+			array_map(
+				static function ( $slide ) {
+					$desktop_id = absint( $slide['image_desktop'] ?? 0 );
+					$mobile_id  = absint( $slide['image_mobile'] ?? 0 );
+
+					if ( empty( $slide['enabled'] ) || ( ! $desktop_id && ! $mobile_id ) ) {
+						return null;
+					}
+
+					if ( ! $desktop_id ) {
+						$desktop_id = $mobile_id;
+					}
+					if ( ! $mobile_id ) {
+						$mobile_id = $desktop_id;
+					}
+
+					$desktop_url = almasland_get_attachment_url( $desktop_id, 'almasland-hero' );
+					$mobile_url  = almasland_get_attachment_url( $mobile_id, 'almasland-hero-mobile' );
+
+					if ( ! $desktop_url && ! $mobile_url ) {
+						return null;
+					}
+
+					return array(
+						'link'   => ! empty( $slide['link'] ) ? $slide['link'] : '',
+						'alt'    => ! empty( $slide['alt'] ) ? $slide['alt'] : __( 'بنر تبلیغاتی', 'almas-land' ),
+						'images' => array(
+							'desktop' => $desktop_url ?: $mobile_url,
+							'mobile'  => $mobile_url ?: $desktop_url,
+						),
+					);
+				},
+				$slides
+			)
 		)
 	);
 }
 
 /**
- * Resolve the first available attachment ID from candidates.
+ * Hero slider settings for front-end JS.
  *
- * @param int ...$ids Attachment IDs.
- * @return int
+ * @return array{autoplay:bool,interval:int}
  */
-function almasland_resolve_attachment_id( ...$ids ) {
-	foreach ( $ids as $id ) {
-		$id = absint( $id );
-		if ( $id ) {
-			return $id;
-		}
-	}
+function almasland_get_home_hero_slider_settings() {
+	$homepage = almasland_get_panel_settings()['homepage'];
 
-	return 0;
+	return array(
+		'autoplay' => ! empty( $homepage['hero_autoplay'] ),
+		'interval' => max( 2000, absint( $homepage['hero_interval'] ?? 5000 ) ),
+	);
 }
 
 /**
- * Front page hero data for template rendering.
+ * Enabled slider items from panel (legacy).
+ *
+ * @return array<int, array<string, mixed>>
+ */
+function almasland_get_enabled_sliders() {
+	$slides = almasland_get_home_hero_slides();
+
+	return array_map(
+		static function ( $slide ) {
+			return array(
+				'image' => 0,
+				'link'  => $slide['link'],
+				'title' => $slide['alt'],
+				'enabled' => true,
+			);
+		},
+		$slides
+	);
+}
+
+/**
+ * Front page hero data for template rendering (legacy single slide).
  *
  * @return array<string, mixed>|null
  */
 function almasland_get_home_hero() {
-	$homepage = almasland_get_panel_settings()['homepage'];
+	$slides = almasland_get_home_hero_slides();
 
-	if ( empty( $homepage['hero_enabled'] ) ) {
+	if ( empty( $slides ) ) {
 		return null;
 	}
 
-	$sliders    = almasland_get_enabled_sliders();
-	$slider_id  = ! empty( $sliders[0]['image'] ) ? absint( $sliders[0]['image'] ) : 0;
-	$legacy_url = almasland_get_option( 'hero_image', '' );
-	$legacy_id  = $legacy_url ? attachment_url_to_postid( $legacy_url ) : 0;
-
-	$desktop_id = almasland_resolve_attachment_id(
-		$homepage['hero_image_desktop'] ?? 0,
-		$slider_id,
-		$legacy_id
-	);
-	$tablet_id = almasland_resolve_attachment_id(
-		$homepage['hero_image_tablet'] ?? 0,
-		$desktop_id
-	);
-	$mobile_id = almasland_resolve_attachment_id(
-		$homepage['hero_image_mobile'] ?? 0,
-		$tablet_id,
-		$desktop_id
-	);
-
-	$button_url = ! empty( $homepage['hero_button_url'] ) ? $homepage['hero_button_url'] : '';
-	if ( ! $button_url && ! empty( $sliders[0]['link'] ) ) {
-		$button_url = $sliders[0]['link'];
-	}
-	if ( ! $button_url && class_exists( 'WooCommerce' ) ) {
-		$button_url = almasland_get_default_shop_url();
-	}
-
-	$title = ! empty( $homepage['hero_title'] ) ? $homepage['hero_title'] : '';
-	if ( ! $title && ! empty( $sliders[0]['title'] ) ) {
-		$title = $sliders[0]['title'];
-	}
-
-	$text = ! empty( $homepage['hero_text'] ) ? $homepage['hero_text'] : '';
-	if ( ! $text && ! empty( $sliders[0]['text'] ) ) {
-		$text = $sliders[0]['text'];
-	}
-
-	$button_text = ! empty( $homepage['hero_button_text'] ) ? $homepage['hero_button_text'] : '';
-	if ( ! $button_text && ! empty( $sliders[0]['button_text'] ) ) {
-		$button_text = $sliders[0]['button_text'];
-	}
-
-	if ( ! $title && ! $text && ! $desktop_id ) {
-		return null;
-	}
+	$first = $slides[0];
 
 	return array(
-		'title'       => $title,
-		'text'        => $text,
-		'button_text' => $button_text,
-		'link'        => $button_url,
-		'images'      => array(
-			'desktop' => $desktop_id ? almasland_get_attachment_url( $desktop_id, 'almasland-hero' ) : '',
-			'tablet'  => $tablet_id ? almasland_get_attachment_url( $tablet_id, 'almasland-hero-tablet' ) : '',
-			'mobile'  => $mobile_id ? almasland_get_attachment_url( $mobile_id, 'almasland-hero-mobile' ) : '',
-		),
+		'title'       => $first['alt'],
+		'text'        => '',
+		'button_text' => '',
+		'link'        => $first['link'],
+		'images'      => $first['images'],
 	);
 }
 

@@ -45,4 +45,17 @@ if ( ! $checkout->is_registration_enabled() && $checkout->is_registration_requir
 		<?php do_action( 'woocommerce_checkout_after_order_review' ); ?>
 	</aside>
 </form>
+
+<?php if ( WC()->cart && ! WC()->cart->is_empty() ) : ?>
+	<div class="checkout-sticky-bar" aria-label="<?php esc_attr_e( 'ثبت و پرداخت سفارش', 'almas-land' ); ?>">
+		<div class="checkout-sticky-bar__total">
+			<span><?php esc_html_e( 'مبلغ قابل پرداخت', 'almas-land' ); ?></span>
+			<strong data-checkout-sticky-total><?php wc_cart_totals_order_total_html(); ?></strong>
+		</div>
+		<button type="button" class="checkout-sticky-bar__submit btn btn--primary" data-checkout-submit>
+			<?php echo esc_html( apply_filters( 'woocommerce_order_button_text', __( 'ثبت و پرداخت سفارش', 'almas-land' ) ) ); ?>
+		</button>
+	</div>
+<?php endif; ?>
+
 <?php do_action( 'woocommerce_after_checkout_form', $checkout ); ?>

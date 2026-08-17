@@ -46,6 +46,27 @@
     if ($sort.length) {
       $sort.sortable({ axis: 'y', handle: '.dashicons-menu' });
     }
+
+    const $heroSlides = $('#almasland-repeater-hero-slides');
+    if ($heroSlides.length) {
+      $heroSlides.sortable({
+        axis: 'y',
+        handle: '.almasland-hero-slide__head',
+        items: '.almasland-hero-slide',
+        update() {
+          $heroSlides.find('.almasland-hero-slide').each(function (index) {
+            $(this).find('input, textarea, select, button').each(function () {
+              const name = $(this).attr('name');
+              if (name) {
+                $(this).attr('name', name.replace(/\[\d+\]/, `[${index}]`));
+              }
+            });
+            $(this).attr('data-index', index);
+            $(this).find('.almasland-hero-slide__number').text(String(index + 1));
+          });
+        },
+      });
+    }
   }
 
   function bindRepeater() {

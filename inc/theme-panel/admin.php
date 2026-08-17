@@ -240,16 +240,46 @@ function almasland_panel_render_homepage() {
 	echo '</ul>';
 	almasland_panel_card_close();
 
-	almasland_panel_card_open( __( 'Hero صفحه اصلی', 'almas-land' ) );
-	echo '<p class="description">' . esc_html__( 'ابعاد پیشنهادی: دسکتاپ ۱۱۰۰×۵۰۰، تبلت ۹۰۰×۴۱۰، موبایل ۷۶۸×۳۵۰ پیکسل.', 'almas-land' ) . '</p>';
-	almasland_panel_field_checkbox( 'almasland_panel[homepage][hero_enabled]', __( 'نمایش Hero', 'almas-land' ), ! empty( $hp['hero_enabled'] ) );
-	almasland_panel_field_image( 'almasland_panel[homepage][hero_image_desktop]', __( 'تصویر دسکتاپ', 'almas-land' ), $hp['hero_image_desktop'] ?? 0 );
-	almasland_panel_field_image( 'almasland_panel[homepage][hero_image_tablet]', __( 'تصویر تبلت', 'almas-land' ), $hp['hero_image_tablet'] ?? 0 );
-	almasland_panel_field_image( 'almasland_panel[homepage][hero_image_mobile]', __( 'تصویر موبایل', 'almas-land' ), $hp['hero_image_mobile'] ?? 0 );
-	almasland_panel_field_text( 'almasland_panel[homepage][hero_title]', __( 'عنوان Hero', 'almas-land' ), $hp['hero_title'] );
-	almasland_panel_field_textarea( 'almasland_panel[homepage][hero_text]', __( 'متن Hero', 'almas-land' ), $hp['hero_text'] );
-	almasland_panel_field_text( 'almasland_panel[homepage][hero_button_text]', __( 'متن دکمه', 'almas-land' ), $hp['hero_button_text'] );
-	almasland_panel_field_text( 'almasland_panel[homepage][hero_button_url]', __( 'لینک Hero', 'almas-land' ), $hp['hero_button_url'], 'url' );
+	almasland_panel_card_open( __( 'اسلایدر Hero', 'almas-land' ) );
+	almasland_panel_hero_size_guide();
+	echo '<div class="almasland-hero-settings">';
+	almasland_panel_field_checkbox( 'almasland_panel[homepage][hero_enabled]', __( 'نمایش اسلایدر', 'almas-land' ), ! empty( $hp['hero_enabled'] ) );
+	almasland_panel_field_checkbox( 'almasland_panel[homepage][hero_autoplay]', __( 'پخش خودکار', 'almas-land' ), ! empty( $hp['hero_autoplay'] ) );
+	almasland_panel_field_text( 'almasland_panel[homepage][hero_interval]', __( 'فاصله بین اسلایدها (ثانیه)', 'almas-land' ), max( 2, (int) ( ( $hp['hero_interval'] ?? 5000 ) / 1000 ) ), 'number' );
+	echo '</div>';
+	$hero_slides = ! empty( $hp['hero_slides'] ) ? $hp['hero_slides'] : array();
+	if ( empty( $hero_slides ) ) {
+		$hero_slides = array(
+			array(
+				'image_desktop' => $hp['hero_image_desktop'] ?? 0,
+				'image_mobile'  => $hp['hero_image_mobile'] ?? 0,
+				'link'          => $hp['hero_button_url'] ?? '',
+				'alt'           => $hp['hero_title'] ?? '',
+				'enabled'       => true,
+			),
+		);
+	}
+	if ( empty( array_filter( wp_list_pluck( $hero_slides, 'image_desktop' ) ) ) && empty( array_filter( wp_list_pluck( $hero_slides, 'image_mobile' ) ) ) ) {
+		$hero_slides = array(
+			array(
+				'image_desktop' => 0,
+				'image_mobile'  => 0,
+				'link'          => '',
+				'alt'           => '',
+				'enabled'       => true,
+			),
+		);
+	}
+	echo '<div class="almasland-hero-slides-head">';
+	echo '<h3>' . esc_html__( 'اسلایدها', 'almas-land' ) . '</h3>';
+	echo '<p class="description">' . esc_html__( 'هر اسلاید دو تصویر جدا دارد. با کشیدن می‌توانید ترتیب را تغییر دهید.', 'almas-land' ) . '</p>';
+	echo '</div>';
+	echo '<div id="almasland-repeater-hero-slides" class="almasland-hero-slides" data-repeater="hero-slides">';
+	foreach ( $hero_slides as $i => $slide ) {
+		almasland_panel_render_hero_slide_row( $i, $slide );
+	}
+	echo '</div>';
+	echo '<button type="button" class="button button-secondary almasland-add-repeater almasland-hero-add-slide" data-target="hero-slides">' . esc_html__( '+ افزودن اسلاید جدید', 'almas-land' ) . '</button>';
 	almasland_panel_card_close();
 
 	almasland_panel_card_open( __( 'متن‌های سکشن', 'almas-land' ) );
@@ -322,6 +352,7 @@ function almasland_panel_page_sliders() {
 }
 
 function almasland_panel_render_sliders() {
+	echo '<div class="notice notice-info inline"><p>' . esc_html__( 'اسلایدر Hero صفحه اصلی از بخش «صفحه اصلی → اسلایدر Hero» مدیریت می‌شود.', 'almas-land' ) . ' <a href="' . esc_url( admin_url( 'admin.php?page=almasland-panel-homepage' ) ) . '">' . esc_html__( 'رفتن به تنظیمات Hero', 'almas-land' ) . '</a></p></div>';
 	$sliders = almasland_get_panel_settings()['sliders'];
 	if ( empty( $sliders ) ) {
 		$sliders = array( array( 'image' => 0, 'title' => '', 'text' => '', 'button_text' => '', 'link' => '', 'enabled' => true ) );
@@ -334,6 +365,78 @@ function almasland_panel_render_sliders() {
 	echo '</div>';
 	echo '<button type="button" class="button almasland-add-repeater" data-target="sliders" data-template="slider">' . esc_html__( 'افزودن اسلاید', 'almas-land' ) . '</button>';
 	almasland_panel_form_close();
+}
+
+/**
+ * Hero image size guide for admin panel.
+ */
+function almasland_panel_hero_size_guide() {
+	?>
+	<div class="almasland-hero-guide" aria-label="<?php esc_attr_e( 'راهنمای ابعاد تصویر', 'almas-land' ); ?>">
+		<div class="almasland-hero-guide__intro">
+			<strong><?php esc_html_e( 'راهنمای سایز تصاویر', 'almas-land' ); ?></strong>
+			<p><?php esc_html_e( 'برای بهترین نتیجه، تصاویر را دقیقاً با ابعاد زیر آماده کنید. فرمت JPG یا WebP با کیفیت ۸۰–۹۰٪ پیشنهاد می‌شود.', 'almas-land' ); ?></p>
+		</div>
+		<div class="almasland-hero-guide__grid">
+			<div class="almasland-hero-guide__item almasland-hero-guide__item--desktop">
+				<span class="almasland-hero-guide__badge"><?php esc_html_e( 'دسکتاپ', 'almas-land' ); ?></span>
+				<strong>1300 × 400 px</strong>
+				<span><?php esc_html_e( 'نسبت ۱۳:۴ — عرض کامل بنر', 'almas-land' ); ?></span>
+			</div>
+			<div class="almasland-hero-guide__item almasland-hero-guide__item--mobile">
+				<span class="almasland-hero-guide__badge"><?php esc_html_e( 'موبایل', 'almas-land' ); ?></span>
+				<strong>768 × 960 px</strong>
+				<span><?php esc_html_e( 'نسبت ۴:۵ — عمودی و تمام‌عرض', 'almas-land' ); ?></span>
+			</div>
+		</div>
+	</div>
+	<?php
+}
+
+/**
+ * Render one hero slide row.
+ *
+ * @param int|string $i    Index.
+ * @param array      $item Slide data.
+ */
+function almasland_panel_render_hero_slide_row( $i, $item ) {
+	$slide_number = is_numeric( $i ) ? ( (int) $i + 1 ) : 1;
+	echo '<article class="almasland-repeater-row almasland-hero-slide" data-index="' . esc_attr( (string) $i ) . '">';
+	echo '<div class="almasland-hero-slide__head">';
+	echo '<div class="almasland-hero-slide__title">';
+	echo '<span class="almasland-hero-slide__number">' . esc_html( almasland_persian_digits( (string) $slide_number ) ) . '</span>';
+	echo '<strong>' . esc_html__( 'اسلاید', 'almas-land' ) . '</strong>';
+	echo '</div>';
+	echo '<div class="almasland-hero-slide__tools">';
+	printf( '<input type="hidden" name="almasland_panel[homepage][hero_slides][%1$s][enabled]" value="0">', esc_attr( (string) $i ) );
+	printf(
+		'<label class="almasland-hero-slide__toggle"><input type="checkbox" name="almasland_panel[homepage][hero_slides][%1$s][enabled]" value="1" %2$s> %3$s</label>',
+		esc_attr( (string) $i ),
+		checked( ! empty( $item['enabled'] ), true, false ),
+		esc_html__( 'فعال', 'almas-land' )
+	);
+	echo '<button type="button" class="button-link-delete almasland-remove-row" aria-label="' . esc_attr__( 'حذف اسلاید', 'almas-land' ) . '">&times;</button>';
+	echo '</div>';
+	echo '</div>';
+	echo '<div class="almasland-hero-slide__images">';
+	almasland_panel_field_image(
+		"almasland_panel[homepage][hero_slides][{$i}][image_desktop]",
+		__( 'تصویر دسکتاپ', 'almas-land' ),
+		$item['image_desktop'] ?? 0,
+		__( '1300×400 px', 'almas-land' )
+	);
+	almasland_panel_field_image(
+		"almasland_panel[homepage][hero_slides][{$i}][image_mobile]",
+		__( 'تصویر موبایل', 'almas-land' ),
+		$item['image_mobile'] ?? 0,
+		__( '768×960 px', 'almas-land' )
+	);
+	echo '</div>';
+	echo '<div class="almasland-hero-slide__meta">';
+	almasland_panel_field_text( "almasland_panel[homepage][hero_slides][{$i}][link]", __( 'لینک کلیک', 'almas-land' ), $item['link'] ?? '', 'url' );
+	almasland_panel_field_text( "almasland_panel[homepage][hero_slides][{$i}][alt]", __( 'متن Alt (SEO)', 'almas-land' ), $item['alt'] ?? '' );
+	echo '</div>';
+	echo '</article>';
 }
 
 /**

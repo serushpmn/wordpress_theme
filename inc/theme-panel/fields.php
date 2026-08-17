@@ -112,19 +112,25 @@ function almasland_panel_field_checkbox( $name, $label, $value ) {
  * @param string $name  Field name.
  * @param string $label Label.
  * @param int    $value Attachment ID.
+ * @param string $hint  Optional size hint.
  */
-function almasland_panel_field_image( $name, $label, $value ) {
+function almasland_panel_field_image( $name, $label, $value, $hint = '' ) {
 	$url = almasland_get_attachment_url( $value, 'thumbnail' );
 	echo '<div class="almasland-field almasland-field--image">';
 	echo '<label><strong>' . esc_html( $label ) . '</strong></label>';
+	if ( $hint ) {
+		echo '<p class="almasland-field__hint">' . esc_html( $hint ) . '</p>';
+	}
 	echo '<div class="almasland-image-preview">';
 	if ( $url ) {
 		echo '<img src="' . esc_url( $url ) . '" alt="">';
 	}
 	echo '</div>';
 	printf( '<input type="hidden" class="almasland-image-id" name="%1$s" value="%2$d">', esc_attr( $name ), (int) $value );
-	echo '<button type="button" class="button almasland-upload-image">' . esc_html__( 'انتخاب تصویر', 'almas-land' ) . '</button> ';
+	echo '<div class="almasland-image-actions">';
+	echo '<button type="button" class="button almasland-upload-image">' . esc_html__( 'انتخاب تصویر', 'almas-land' ) . '</button>';
 	echo '<button type="button" class="button almasland-remove-image">' . esc_html__( 'حذف', 'almas-land' ) . '</button>';
+	echo '</div>';
 	echo '</div>';
 }
 

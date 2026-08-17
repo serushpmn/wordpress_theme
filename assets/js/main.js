@@ -1162,6 +1162,41 @@ function initFrontPageOfferCartButtons() {
   });
 }
 
+function initFrontPageHeroSwiper() {
+  const slider = document.querySelector("[data-hero-swiper]");
+  if (!slider || typeof Swiper === "undefined" || slider.swiper) {
+    return;
+  }
+
+  const autoplayEnabled = slider.dataset.autoplay !== "false";
+  const interval = Number(slider.dataset.interval || 5000);
+
+  // eslint-disable-next-line no-new
+  new Swiper(slider, {
+    rtl: true,
+    loop: true,
+    speed: 650,
+    slidesPerView: 1,
+    spaceBetween: 0,
+    watchOverflow: true,
+    autoplay: autoplayEnabled
+      ? {
+          delay: interval,
+          disableOnInteraction: false,
+          pauseOnMouseEnter: true,
+        }
+      : false,
+    navigation: {
+      nextEl: slider.querySelector(".swiper-button-next"),
+      prevEl: slider.querySelector(".swiper-button-prev"),
+    },
+    pagination: {
+      el: slider.querySelector(".swiper-pagination"),
+      clickable: true,
+    },
+  });
+}
+
 function initFrontPageSpecialOffersSwiper() {
   const slider = document.querySelector(".front-page-offers__slider");
   if (!slider || typeof Swiper === "undefined" || slider.swiper) {
@@ -1285,6 +1320,7 @@ function initFrontPageCatalogFilters() {
 
 initFrontPageTrustTooltips();
 initFrontPageOfferCartButtons();
+initFrontPageHeroSwiper();
 initFrontPageSpecialOffersSwiper();
 initFrontPageCatalogFilters();
 
@@ -1413,4 +1449,56 @@ initFrontPageCatalogFilters();
     document.documentElement.classList.remove("is-page-loading");
   });
 })();
+
+function initCheckoutStickyBar() {
+  if (!document.body.classList.contains("checkout-page")) {
+    return;
+  }
+
+  const placeOrder = document.querySelector("#place_order");
+  const stickySubmit = document.querySelector("[data-checkout-submit]");
+  const stickyTotal = document.querySelector("[data-checkout-sticky-total]");
+
+  if (!placeOrder || !stickySubmit) {
+    return;
+  }
+
+  const syncStickyTotal = () => {
+    const orderTotalCell = document.querySelector(".checkout-totals-table .order-total td");
+    if (orderTotalCell && stickyTotal) {
+      stickyTotal.innerHTML = orderTotalCell.innerHTML;
+    }
+  };
+
+  const syncStickySubmitState = () => {
+    stickySubmit.disabled = placeOrder.disabled;
+    stickySubmit.textContent = placeOrder.textContent.trim() || placeOrder.value;
+  };
+
+  stickySubmit.addEventListener("click", () => {
+    if (!placeOrder.disabled) {
+      placeOrder.click();
+    }
+  });
+
+  syncStickyTotal();
+  syncStickySubmitState();
+
+  new MutationObserver(syncStickySubmitState).observe(placeOrder, {
+    attributes: true,
+    attributeFilter: ["disabled"],
+    childList: true,
+    characterData: true,
+    subtree: true,
+  });
+
+  if (typeof window.jQuery !== "undefined") {
+    window.jQuery(document.body).on("updated_checkout", () => {
+      syncStickyTotal();
+      syncStickySubmitState();
+    });
+  }
+}
+
+initCheckoutStickyBar();
 

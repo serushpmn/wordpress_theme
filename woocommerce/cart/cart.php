@@ -53,7 +53,7 @@ do_action( 'woocommerce_before_cart' );
 						echo apply_filters( // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 							'woocommerce_cart_item_remove_link',
 							sprintf(
-								'<a role="button" href="%s" class="cart-item__remove remove-button" aria-label="%s" data-product_id="%s" data-product_sku="%s" data-cart-remove%s><span class="screen-reader-text">%s</span></a>',
+								'<a role="button" href="%s" class="cart-item__remove remove-button" aria-label="%s" data-product_id="%s" data-product_sku="%s" data-cart-remove%s><svg class="cart-item__remove-icon" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M9 3h6l1 2h4v2H4V5h4l1-2Zm1 6h2v9h-2V9Zm4 0h2v9h-2V9ZM7 9h2v9H7V9Zm-1 12h12l1-12H5l1 12Z"/></svg><span class="screen-reader-text">%s</span></a>',
 								esc_url( wc_get_cart_remove_url( $cart_item_key ) ),
 								esc_attr( sprintf( __( 'حذف %s از سبد خرید', 'almas-land' ), wp_strip_all_tags( $product_name ) ) ),
 								esc_attr( $product_id ),

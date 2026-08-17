@@ -32,6 +32,8 @@ function almasland_get_panel_settings() {
 		$settings = almasland_migrate_theme_mods_to_panel( $settings );
 	}
 
+	$settings = almasland_migrate_homepage_hero_slides( $settings );
+
 	return $settings;
 }
 
@@ -154,6 +156,55 @@ function almasland_migrate_theme_mods_to_panel( $settings ) {
 }
 
 /**
+ * Migrate legacy hero/slider data into homepage hero slides.
+ *
+ * @param array<string, mixed> $settings Settings.
+ * @return array<string, mixed>
+ */
+function almasland_migrate_homepage_hero_slides( $settings ) {
+	if ( ! empty( $settings['homepage']['hero_slides'] ) ) {
+		return $settings;
+	}
+
+	$slides    = array();
+	$homepage  = $settings['homepage'] ?? array();
+	$legacy_id = absint( $homepage['hero_image_desktop'] ?? 0 );
+	$mobile_id = absint( $homepage['hero_image_mobile'] ?? 0 );
+
+	if ( $legacy_id || $mobile_id ) {
+		$slides[] = array(
+			'image_desktop' => $legacy_id,
+			'image_mobile'  => $mobile_id ?: $legacy_id,
+			'link'          => $homepage['hero_button_url'] ?? '',
+			'alt'           => $homepage['hero_title'] ?? '',
+			'enabled'       => true,
+		);
+	}
+
+	if ( empty( $slides ) && ! empty( $settings['sliders'] ) && is_array( $settings['sliders'] ) ) {
+		foreach ( $settings['sliders'] as $slide ) {
+			if ( empty( $slide['enabled'] ) || empty( $slide['image'] ) ) {
+				continue;
+			}
+			$slides[] = array(
+				'image_desktop' => absint( $slide['image'] ),
+				'image_mobile'  => absint( $slide['image'] ),
+				'link'          => $slide['link'] ?? '',
+				'alt'           => $slide['title'] ?? '',
+				'enabled'       => true,
+			);
+		}
+	}
+
+	if ( ! empty( $slides ) ) {
+		$settings['homepage']['hero_slides'] = $slides;
+		update_option( 'almasland_theme_panel', $settings, false );
+	}
+
+	return $settings;
+}
+
+/**
  * Get attachment image URL by ID.
  *
  * @param int    $attachment_id Attachment ID.
@@ -227,6 +278,10 @@ function almasland_sanitize_panel_settings( $input ) {
 		$clean['homepage']['hero_button_text']   = sanitize_text_field( $hp['hero_button_text'] ?? '' );
 		$clean['homepage']['hero_button_url']    = esc_url_raw( $hp['hero_button_url'] ?? '' );
 		$clean['homepage']['hero_enabled']       = ! empty( $hp['hero_enabled'] );
+		$clean['homepage']['hero_autoplay']      = ! empty( $hp['hero_autoplay'] );
+		$interval_seconds                        = max( 2, min( 15, absint( $hp['hero_interval'] ?? 5 ) ) );
+		$clean['homepage']['hero_interval']      = $interval_seconds * 1000;
+		$clean['homepage']['hero_slides']        = almasland_sanitize_repeater_hero_slides( $hp['hero_slides'] ?? array() );
 		$clean['homepage']['hero_image_desktop'] = absint( $hp['hero_image_desktop'] ?? 0 );
 		$clean['homepage']['hero_image_tablet']  = absint( $hp['hero_image_tablet'] ?? 0 );
 		$clean['homepage']['hero_image_mobile']  = absint( $hp['hero_image_mobile'] ?? 0 );
@@ -300,6 +355,37 @@ function almasland_sanitize_panel_settings( $input ) {
 		$clean['header']['topbar_text'] = sanitize_text_field( $input['header']['topbar_text'] ?? '' );
 	}
 
+	return $clean;
+}
+
+/**
+ * Sanitize hero slide repeater.
+ *
+ * @param mixed $items Items.
+ * @return array<int, array<string, mixed>>
+ */
+function almasland_sanitize_repeater_hero_slides( $items ) {
+	$clean = array();
+	if ( ! is_array( $items ) ) {
+		return $clean;
+	}
+	foreach ( $items as $item ) {
+		if ( ! is_array( $item ) ) {
+			continue;
+		}
+		$desktop = absint( $item['image_desktop'] ?? 0 );
+		$mobile  = absint( $item['image_mobile'] ?? 0 );
+		if ( ! $desktop && ! $mobile ) {
+			continue;
+		}
+		$clean[] = array(
+			'image_desktop' => $desktop,
+			'image_mobile'  => $mobile ?: $desktop,
+			'link'          => esc_url_raw( $item['link'] ?? '' ),
+			'alt'           => sanitize_text_field( $item['alt'] ?? '' ),
+			'enabled'       => ! empty( $item['enabled'] ),
+		);
+	}
 	return $clean;
 }
 

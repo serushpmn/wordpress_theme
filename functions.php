@@ -9,7 +9,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'ALMASLAND_VERSION', '1.2.0' );
+define( 'ALMASLAND_VERSION', '1.2.4' );
 define( 'ALMASLAND_DIR', get_template_directory() );
 define( 'ALMASLAND_URI', get_template_directory_uri() );
 
@@ -148,6 +148,10 @@ function almasland_enqueue_assets() {
 		wp_enqueue_script( 'wc-add-to-cart-variation' );
 		$script_deps[] = 'jquery';
 		$script_deps[] = 'wc-add-to-cart-variation';
+	}
+
+	if ( function_exists( 'is_checkout' ) && is_checkout() && ! is_order_received_page() ) {
+		$script_deps[] = 'jquery';
 	}
 
 	wp_enqueue_script( 'almasland-main', ALMASLAND_URI . '/assets/js/main.js', $script_deps, ALMASLAND_VERSION, true );
