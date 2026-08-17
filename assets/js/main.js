@@ -758,6 +758,25 @@ function initVariableProductUI() {
   });
 }
 
+function isQuantityInputLocked(input) {
+  if (!input) {
+    return false;
+  }
+
+  const wrap = input.closest(".quantity-control, .cart-item__quantity");
+  if (input.readOnly || input.dataset.qtyLocked === "true" || wrap?.dataset.qtyLocked === "true") {
+    return true;
+  }
+
+  if (wrap?.classList.contains("quantity-control--locked")) {
+    return true;
+  }
+
+  const max = Number(input.max);
+  const min = Number(input.min || 1);
+  return max === 1 && min >= 1;
+}
+
 document.querySelectorAll(".cart-item .quantity-control .quantity").forEach((quantity) => {
   if (quantity.dataset.enhanced === "true") {
     return;
@@ -768,11 +787,19 @@ document.querySelectorAll(".cart-item .quantity-control .quantity").forEach((qua
     return;
   }
 
-  const wrap = quantity.closest(".cart-item__quantity");
-  const removeLink = wrap?.querySelector("[data-cart-remove], .cart-item__remove");
-
   quantity.dataset.enhanced = "true";
   quantity.classList.add("quantity-control__wc");
+
+  if (isQuantityInputLocked(input)) {
+    input.readOnly = true;
+    input.setAttribute("aria-readonly", "true");
+    quantity.classList.add("is-locked");
+    quantity.closest(".cart-item__quantity")?.classList.add("quantity-control--locked");
+    return;
+  }
+
+  const wrap = quantity.closest(".cart-item__quantity");
+  const removeLink = wrap?.querySelector("[data-cart-remove], .cart-item__remove");
 
   const minus = document.createElement("button");
   minus.type = "button";
@@ -824,6 +851,11 @@ document.querySelectorAll(".cart-item .quantity-control .quantity").forEach((qua
 const cartUpdateButton = document.querySelector(".woocommerce-cart-form .cart-update-button");
 
 document.querySelectorAll(".woocommerce-cart-form input.qty").forEach((input) => {
+  if (isQuantityInputLocked(input)) {
+    input.readOnly = true;
+    return;
+  }
+
   input.addEventListener("change", () => {
     if (cartUpdateButton) {
       cartUpdateButton.disabled = false;

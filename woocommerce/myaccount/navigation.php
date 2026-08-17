@@ -10,14 +10,13 @@ defined( 'ABSPATH' ) || exit;
 
 do_action( 'woocommerce_before_account_navigation' );
 ?>
-<nav class="woocommerce-MyAccount-navigation" aria-label="<?php esc_attr_e( 'صفحات حساب کاربری', 'almas-land' ); ?>">
-	<h2><?php esc_html_e( 'حساب من', 'almas-land' ); ?></h2>
-	<ul class="sidebar-list">
+<nav class="woocommerce-MyAccount-navigation account-nav" aria-label="<?php esc_attr_e( 'صفحات حساب کاربری', 'almas-land' ); ?>">
+	<ul class="account-nav__list">
 		<?php foreach ( wc_get_account_menu_items() as $endpoint => $label ) : ?>
-			<li class="<?php echo esc_attr( wc_get_account_menu_item_classes( $endpoint ) ); ?>">
+			<li class="account-nav__item <?php echo esc_attr( wc_get_account_menu_item_classes( $endpoint ) ); ?>">
 				<a href="<?php echo esc_url( wc_get_account_endpoint_url( $endpoint ) ); ?>" <?php echo wc_is_current_account_menu_item( $endpoint ) ? 'aria-current="page"' : ''; ?>>
-					<?php echo esc_html( $label ); ?>
-					<span aria-hidden="true">›</span>
+					<span class="account-nav__icon" aria-hidden="true"><?php echo almasland_account_nav_icon( $endpoint ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></span>
+					<span class="account-nav__label"><?php echo esc_html( $label ); ?></span>
 				</a>
 			</li>
 		<?php endforeach; ?>

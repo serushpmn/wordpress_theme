@@ -34,6 +34,7 @@ do_action( 'woocommerce_before_cart' );
 			$current_price     = (float) $_product->get_price();
 			$discount_percent  = $regular_price > 0 && $current_price > 0 && $current_price < $regular_price ? (int) round( ( ( $regular_price - $current_price ) / $regular_price ) * 100 ) : 0;
 			$item_qty          = (int) $cart_item['quantity'];
+			$quantity_locked   = almasland_is_cart_quantity_locked( $_product );
 			?>
 			<div class="cart-item <?php echo esc_attr( apply_filters( 'woocommerce_cart_item_class', 'cart_item', $cart_item, $cart_item_key ) ); ?>">
 				<div class="cart-item__aside">
@@ -47,7 +48,7 @@ do_action( 'woocommerce_before_cart' );
 						<?php endif; ?>
 					</div>
 
-					<div class="cart-item__quantity quantity-control" aria-label="<?php esc_attr_e( 'تعداد محصول', 'almas-land' ); ?>">
+					<div class="cart-item__quantity quantity-control<?php echo $quantity_locked ? ' quantity-control--locked' : ''; ?>"<?php echo $quantity_locked ? ' data-qty-locked="true"' : ''; ?> aria-label="<?php esc_attr_e( 'تعداد محصول', 'almas-land' ); ?>">
 						<?php
 						echo apply_filters( // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 							'woocommerce_cart_item_remove_link',
@@ -63,7 +64,7 @@ do_action( 'woocommerce_before_cart' );
 							$cart_item_key
 						);
 
-						if ( $_product->is_sold_individually() ) {
+						if ( $quantity_locked ) {
 							$min_quantity = 1;
 							$max_quantity = 1;
 						} else {
@@ -78,6 +79,8 @@ do_action( 'woocommerce_before_cart' );
 								'max_value'    => $max_quantity,
 								'min_value'    => $min_quantity,
 								'product_name' => $product_name,
+								'readonly'     => $quantity_locked,
+								'classes'      => $quantity_locked ? array( 'input-text', 'qty', 'text', 'qty-locked' ) : array( 'input-text', 'qty', 'text' ),
 							),
 							$_product,
 							false

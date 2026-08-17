@@ -71,10 +71,7 @@
 		<?php get_search_form(); ?>
 
 		<div class="header-actions">
-			<a class="header-action header-action--account" href="<?php echo esc_url( class_exists( 'WooCommerce' ) ? wc_get_page_permalink( 'myaccount' ) : wp_login_url() ); ?>">
-				<svg viewBox="0 0 24 24" aria-hidden="true" fill="none"><circle cx="12" cy="8" r="3.4" stroke="currentColor" stroke-width="1.8"/><path d="M5.5 19c1.4-3.2 3.8-4.8 6.5-4.8s5.1 1.6 6.5 4.8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-				<span><?php esc_html_e( 'ورود / ثبت‌نام', 'almas-land' ); ?></span>
-			</a>
+			<?php almasland_header_account(); ?>
 			<?php almasland_header_cart(); ?>
 		</div>
 	</div>

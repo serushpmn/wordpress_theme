@@ -255,6 +255,34 @@ function almasland_get_phone_tel() {
 }
 
 /**
+ * Account action for header.
+ */
+function almasland_header_account() {
+	$account_url = class_exists( 'WooCommerce' ) ? wc_get_page_permalink( 'myaccount' ) : wp_login_url();
+
+	if ( is_user_logged_in() ) {
+		$user    = wp_get_current_user();
+		$initial = function_exists( 'almasland_get_user_avatar_initial' )
+			? almasland_get_user_avatar_initial( $user )
+			: mb_substr( $user->display_name, 0, 1, 'UTF-8' );
+		$label   = $user->first_name ? $user->first_name : __( 'حساب من', 'almas-land' );
+		?>
+		<a class="header-action header-action--account is-logged-in" href="<?php echo esc_url( $account_url ); ?>" aria-label="<?php esc_attr_e( 'پنل کاربری', 'almas-land' ); ?>">
+			<span class="header-action__icon header-action__avatar" aria-hidden="true"><?php echo esc_html( $initial ); ?></span>
+			<span><?php echo esc_html( $label ); ?></span>
+		</a>
+		<?php
+		return;
+	}
+	?>
+	<a class="header-action header-action--account" href="<?php echo esc_url( $account_url ); ?>">
+		<svg viewBox="0 0 24 24" aria-hidden="true" fill="none"><circle cx="12" cy="8" r="3.4" stroke="currentColor" stroke-width="1.8"/><path d="M5.5 19c1.4-3.2 3.8-4.8 6.5-4.8s5.1 1.6 6.5 4.8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+		<span><?php esc_html_e( 'ورود / ثبت‌نام', 'almas-land' ); ?></span>
+	</a>
+	<?php
+}
+
+/**
  * Cart action for header.
  */
 function almasland_header_cart() {

@@ -484,37 +484,54 @@ function almasland_checkout_order_button_text() {
 add_filter( 'woocommerce_order_button_text', 'almasland_checkout_order_button_text' );
 
 /**
+ * First character for avatar initials.
+ *
+ * @param WP_User|null $user User object.
+ * @return string
+ */
+function almasland_get_user_avatar_initial( $user = null ) {
+	$user = $user instanceof WP_User ? $user : wp_get_current_user();
+	$name = $user->first_name ? $user->first_name : ( $user->display_name ? $user->display_name : $user->user_login );
+
+	if ( ! $name ) {
+		return '?';
+	}
+
+	return function_exists( 'mb_substr' ) ? mb_substr( $name, 0, 1, 'UTF-8' ) : substr( $name, 0, 1 );
+}
+
+/**
+ * SVG icon for account navigation items.
+ *
+ * @param string $endpoint Menu endpoint key.
+ * @return string
+ */
+function almasland_account_nav_icon( $endpoint ) {
+	$icons = array(
+		'dashboard'       => '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1h-5v-6H10v6H5a1 1 0 0 1-1-1v-9.5Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>',
+		'orders'          => '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 4h10l1 3H6l1-3Zm-1 5h12l-1 11H8L6 9Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>',
+		'downloads'       => '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3v10m0 0 4-4m-4 4-4-4M5 20h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+		'edit-address'    => '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 21s7-4.5 7-11a7 7 0 1 0-14 0c0 6.5 7 11 7 11Z" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="10" r="2.5" stroke="currentColor" stroke-width="1.8"/></svg>',
+		'payment-methods' => '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3" y="6" width="18" height="12" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M3 10h18" stroke="currentColor" stroke-width="1.8"/></svg>',
+		'edit-account'    => '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="8" r="3.4" stroke="currentColor" stroke-width="1.8"/><path d="M5.5 19c1.4-3.2 3.8-4.8 6.5-4.8s5.1 1.6 6.5 4.8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>',
+		'customer-logout' => '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M10 7V5a1 1 0 0 1 1-1h8v16h-8a1 1 0 0 1-1-1v-2M7 12H3m0 0 3-3m-3 3 3 3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+	);
+
+	return isset( $icons[ $endpoint ] ) ? $icons[ $endpoint ] : '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="8" stroke="currentColor" stroke-width="1.8"/></svg>';
+}
+
+/**
  * Account page hero (dashboard only).
  */
 function almasland_account_page_hero() {
-	if ( ! is_account_page() || is_wc_endpoint_url() || ! is_user_logged_in() ) {
-		return;
-	}
-	?>
-	<section class="page-hero" aria-labelledby="account-title">
-		<div>
-			<span class="eyebrow"><?php esc_html_e( 'My Account', 'almas-land' ); ?></span>
-			<h1 id="account-title"><?php esc_html_e( 'داشبورد حساب کاربری', 'almas-land' ); ?></h1>
-			<p><?php esc_html_e( 'نمای کلی سفارش‌ها، آدرس‌ها، اطلاعات پروفایل و پیام‌های فروشگاه در یک فضای منظم.', 'almas-land' ); ?></p>
-		</div>
-		<img src="<?php echo esc_url( ALMASLAND_URI . '/assets/images/category-phone.svg' ); ?>" alt="" width="420" height="520">
-	</section>
-	<?php
+	return;
 }
 
 /**
  * Login page hero.
  */
 function almasland_account_login_hero() {
-	?>
-	<section class="page-hero page-hero--compact" aria-labelledby="account-login-title">
-		<div>
-			<span class="eyebrow"><?php esc_html_e( 'My Account', 'almas-land' ); ?></span>
-			<h1 id="account-login-title"><?php esc_html_e( 'ورود و ثبت‌نام', 'almas-land' ); ?></h1>
-			<p><?php esc_html_e( 'برای پیگیری سفارش‌ها و مدیریت حساب خود وارد شوید یا ثبت‌نام کنید.', 'almas-land' ); ?></p>
-		</div>
-	</section>
-	<?php
+	return;
 }
 
 /**
@@ -808,6 +825,28 @@ function almasland_hide_outofstock_price_html( $price_html, $product ) {
 	return $price_html;
 }
 add_filter( 'woocommerce_get_price_html', 'almasland_hide_outofstock_price_html', 20, 2 );
+
+/**
+ * Whether cart quantity should be fixed (not editable).
+ *
+ * Applies when the product is sold individually or max purchasable qty is 1.
+ *
+ * @param WC_Product $product Product.
+ * @return bool
+ */
+function almasland_is_cart_quantity_locked( $product ) {
+	if ( ! $product instanceof WC_Product ) {
+		return false;
+	}
+
+	if ( $product->is_sold_individually() ) {
+		return true;
+	}
+
+	$max_quantity = (int) $product->get_max_purchase_quantity();
+
+	return 1 === $max_quantity;
+}
 
 /**
  * Product category list as plain text.

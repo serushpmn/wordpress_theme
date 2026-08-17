@@ -716,7 +716,7 @@
   position: relative;
   overflow: hidden;
   margin-inline: 0;
-  padding-bottom: 40px;
+  padding-bottom: 20px !important;
 }
 
 .front-page-offers__slider .swiper-wrapper {
@@ -1399,7 +1399,7 @@
   padding: 8px 16px;
   border: 0;
   border-radius: 999px;
-  background: #f1f3f8;
+  background: var(--color-surface-soft);
   color: var(--color-text, #1f2937);
   font: inherit;
   font-size: clamp(0.82rem, 1vw, 0.9rem);
@@ -1412,7 +1412,7 @@
 
 .front-page-catalog__tab:hover,
 .front-page-catalog__tab:focus-visible {
-  background: #e6e9f2;
+  background: var(--color-surface-gray);
   outline: none;
 }
 
@@ -1853,4 +1853,53 @@
 
 [data-theme="dark"] .front-page-features__subtitle {
   color: rgba(232, 237, 247, 0.62);
+}
+
+[data-theme="dark"] .front-page-categories {
+  --category-icon-bg: rgba(255, 255, 255, 0.06);
+  --category-muted: rgba(232, 237, 247, 0.62);
+}
+
+[data-theme="dark"] .front-page-categories__all:hover,
+[data-theme="dark"] .front-page-categories__all:focus-visible {
+  color: var(--category-accent);
+}
+
+[data-theme="dark"] .front-page-offer-card__grade--like-new,
+[data-theme="dark"] .front-page-catalog-card__grade--like-new {
+  background: rgba(22, 163, 74, 0.2);
+  color: #86efac;
+}
+
+[data-theme="dark"] .front-page-offer-card__grade--very-clean,
+[data-theme="dark"] .front-page-catalog-card__grade--very-clean {
+  background: rgba(15, 118, 110, 0.22);
+  color: #5eead4;
+}
+
+[data-theme="dark"] .front-page-offer-card__grade--clean,
+[data-theme="dark"] .front-page-catalog-card__grade--clean {
+  background: rgba(180, 83, 9, 0.22);
+  color: #fcd34d;
+}
+
+[data-theme="dark"] .front-page-offer-card__grade--fair,
+[data-theme="dark"] .front-page-catalog-card__grade--fair {
+  background: rgba(194, 65, 12, 0.22);
+  color: #fdba74;
+}
+
+[data-theme="dark"] .front-page-offer-card__grade--default,
+[data-theme="dark"] .front-page-catalog-card__grade--default {
+  background: rgba(106, 168, 255, 0.16);
+  color: #c4d4ff;
+}
+
+[data-theme="dark"] .front-page-offer-card__cart--view {
+  background: var(--color-muted-mid, #637294);
+}
+
+[data-theme="dark"] .front-page-offer-card__cart--view:hover,
+[data-theme="dark"] .front-page-offer-card__cart--view:focus-visible {
+  background: var(--color-muted-line, #5a6780);
 }
