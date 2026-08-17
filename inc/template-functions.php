@@ -1124,6 +1124,123 @@ function almasland_should_show_product_price( $product ) {
 }
 
 /**
+ * Render modern product-card pricing footer or out-of-stock CTA.
+ *
+ * @param WC_Product|null $product Product.
+ * @return void
+ */
+function almasland_render_product_card_pricing( $product ) {
+	if ( ! $product instanceof WC_Product ) {
+		return;
+	}
+
+	$product_link = $product->get_permalink();
+
+	if ( ! $product->is_in_stock() ) {
+		printf(
+			'<a class="almas-card-pricing__cta almas-card-pricing__cta--view" href="%1$s">%2$s</a>',
+			esc_url( $product_link ),
+			esc_html__( 'مشاهده محصول', 'almas-land' )
+		);
+		return;
+	}
+
+	if ( ! almasland_should_show_product_price( $product ) ) {
+		return;
+	}
+
+	$sale_price = (float) $product->get_price();
+	$regular    = (float) $product->get_regular_price();
+	$discount   = function_exists( 'almasland_get_discount_percent' ) ? almasland_get_discount_percent( $product ) : 0;
+	$on_sale    = $regular > 0 && $sale_price > 0 && $regular > $sale_price;
+
+	echo '<div class="almas-card-pricing">';
+
+	if ( $on_sale ) {
+		echo '<div class="almas-card-pricing__deals">';
+		printf(
+			'<span class="almas-card-pricing__discount">%s</span>',
+			esc_html(
+				sprintf(
+					/* translators: %s: discount percent */
+					__( '%s%%', 'almas-land' ),
+					almasland_persian_digits( (string) $discount )
+				)
+			)
+		);
+		printf(
+			'<del class="almas-card-pricing__old">%s</del>',
+			esc_html( almasland_format_plain_price( $regular ) )
+		);
+		echo '</div>';
+	}
+
+	if ( $sale_price > 0 ) {
+		printf(
+			'<div class="almas-card-pricing__final">%s</div>',
+			wp_kses_post( almasland_format_card_price_html( $sale_price ) )
+		);
+	}
+
+	echo '</div>';
+}
+
+/**
+ * Grade badge for any product that has card grade meta (not only used items).
+ *
+ * @param WC_Product|null $product Product.
+ * @return array{text: string, tone: string, bg?: string, color?: string}|null
+ */
+function almasland_get_product_card_grade( $product ) {
+	return function_exists( 'almasland_get_product_grade_badge' )
+		? almasland_get_product_grade_badge( $product )
+		: null;
+}
+
+/**
+ * Render grade badge and color swatch row for product cards.
+ *
+ * @param WC_Product|null $product     Product.
+ * @param array|null      $grade       Optional preloaded grade data.
+ * @param string          $grade_style Optional inline grade styles.
+ * @return void
+ */
+function almasland_render_product_card_tags( $product, $grade = null, $grade_style = '' ) {
+	if ( ! $product instanceof WC_Product ) {
+		return;
+	}
+
+	if ( null === $grade ) {
+		$grade = almasland_get_product_card_grade( $product );
+	}
+
+	$color_html = function_exists( 'almasland_render_product_color_swatch' )
+		? almasland_render_product_color_swatch( $product, array( 'size' => 'sm' ) )
+		: '';
+
+	if ( ! $grade && '' === $color_html ) {
+		return;
+	}
+
+	echo '<div class="product-card__tags">';
+
+	if ( $grade ) {
+		printf(
+			'<span class="product-card__grade product-card__grade--%1$s"%3$s>%2$s</span>',
+			esc_attr( $grade['tone'] ),
+			esc_html( $grade['text'] ),
+			$grade_style // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		);
+	}
+
+	if ( $color_html ) {
+		echo wp_kses_post( $color_html );
+	}
+
+	echo '</div>';
+}
+
+/**
  * CTA label for product cards.
  *
  * @param WC_Product $product Product.
@@ -1428,12 +1545,8 @@ function almasland_get_home_catalog_card_html( $product ) {
 	$product_link  = $product->get_permalink();
 	$summary       = almasland_get_product_card_summary( $product );
 	$is_used       = almasland_is_used_product( $product );
-	$grade         = $is_used ? almasland_get_product_grade_badge( $product ) : null;
-	$sale_price    = (float) $product->get_price();
-	$regular_price = (float) $product->get_regular_price();
-	$stock_label   = almasland_get_product_card_stock_label( $product );
+	$grade         = almasland_get_product_card_grade( $product );
 	$stock_class   = function_exists( 'almasland_stock_class' ) ? almasland_stock_class( $product ) : '';
-	$cta_label     = almasland_get_product_card_cta_label( $product );
 	$grade_style   = '';
 	$card_class    = 'front-page-catalog-card front-page-catalog-card--storefront' . ( $is_used ? ' front-page-catalog-card--used' : '' );
 
@@ -1455,28 +1568,14 @@ function almasland_get_home_catalog_card_html( $product ) {
 			<a class="front-page-catalog-card__title" href="<?php echo esc_url( $product_link ); ?>">
 				<?php echo esc_html( almasland_get_product_card_title( $product ) ); ?>
 			</a>
-			<?php if ( $grade ) : ?>
-				<span class="front-page-catalog-card__grade front-page-catalog-card__grade--<?php echo esc_attr( $grade['tone'] ); ?>"<?php echo $grade_style; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>>
-					<?php echo esc_html( $grade['text'] ); ?>
-				</span>
-			<?php endif; ?>
+			<?php almasland_render_product_card_tags( $product, $grade, $grade_style ); ?>
 			<?php if ( $summary ) : ?>
 				<span class="front-page-catalog-card__specs"><?php echo esc_html( $summary ); ?></span>
 			<?php endif; ?>
-			<span class="front-page-catalog-card__stock stock <?php echo esc_attr( $stock_class ); ?>"><?php echo esc_html( $stock_label ); ?></span>
-			<?php if ( almasland_should_show_product_price( $product ) ) : ?>
-				<span class="front-page-catalog-card__prices">
-					<?php if ( $sale_price > 0 ) : ?>
-						<span class="front-page-catalog-card__price"><?php echo wp_kses_post( almasland_format_card_price_html( $sale_price ) ); ?></span>
-					<?php endif; ?>
-					<?php if ( $regular_price > 0 && $regular_price > $sale_price ) : ?>
-						<span class="front-page-catalog-card__price-regular"><del><?php echo esc_html( almasland_format_plain_price( $regular_price ) ); ?></del></span>
-					<?php endif; ?>
-				</span>
+			<?php if ( ! $product->is_in_stock() ) : ?>
+				<span class="front-page-catalog-card__stock stock <?php echo esc_attr( $stock_class ); ?>"><?php esc_html_e( 'ناموجود', 'almas-land' ); ?></span>
 			<?php endif; ?>
-			<a class="front-page-catalog-card__cta<?php echo $product->is_in_stock() ? '' : ' front-page-catalog-card__cta--view'; ?>" href="<?php echo esc_url( $product_link ); ?>">
-				<?php echo esc_html( $cta_label ); ?>
-			</a>
+			<?php almasland_render_product_card_pricing( $product ); ?>
 		</div>
 	</article>
 	<?php

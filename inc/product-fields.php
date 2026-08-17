@@ -32,6 +32,11 @@ function almasland_product_fields() {
 			'description' => esc_html__( 'وضعیت ظاهری برای نمایش رنگی روی کارت محصولات دست‌دوم.', 'almas-land' ),
 			'options'     => almasland_get_product_card_grade_options(),
 		),
+		'_almas_product_color'  => array(
+			'label'       => esc_html__( 'رنگ محصول', 'almas-land' ),
+			'type'        => 'color',
+			'description' => esc_html__( 'رنگ را با کد hex یا انتخابگر رنگ مشخص کنید. روی کارت و صفحه محصول به‌صورت دایره نمایش داده می‌شود.', 'almas-land' ),
+		),
 		'_almas_brand'          => array( 'label' => esc_html__( 'برند محصول', 'almas-land' ), 'type' => 'text' ),
 		'_almas_warranty'       => array( 'label' => esc_html__( 'گارانتی', 'almas-land' ), 'type' => 'text' ),
 		'_almas_cosmetic'       => array( 'label' => esc_html__( 'وضعیت ظاهری کالا', 'almas-land' ), 'type' => 'text' ),
@@ -98,6 +103,173 @@ function almasland_get_product_card_grade_definitions() {
 }
 
 /**
+ * Sanitize a product color hex value.
+ *
+ * @param string $value Raw color.
+ * @return string
+ */
+function almasland_sanitize_product_color( $value ) {
+	$value = trim( (string) $value );
+	if ( '' === $value ) {
+		return '';
+	}
+
+	if ( '#' !== $value[0] ) {
+		$value = '#' . ltrim( $value, '#' );
+	}
+
+	if ( preg_match( '/^#([a-fA-F0-9]{3})$/', $value, $matches ) ) {
+		$chars = str_split( $matches[1] );
+		$value = sprintf( '#%s%s%s%s%s%s', $chars[0], $chars[0], $chars[1], $chars[1], $chars[2], $chars[2] );
+	}
+
+	$sanitized = sanitize_hex_color( $value );
+
+	return $sanitized ? strtoupper( $sanitized ) : '';
+}
+
+/**
+ * Get product color from meta (supports variations via parent).
+ *
+ * @param WC_Product|null $product Product.
+ * @return string Hex color or empty string.
+ */
+function almasland_get_product_color( $product ) {
+	if ( ! $product instanceof WC_Product ) {
+		return '';
+	}
+
+	$source = $product;
+	if ( $product->is_type( 'variation' ) ) {
+		$parent = wc_get_product( $product->get_parent_id() );
+		if ( $parent ) {
+			$source = $parent;
+		}
+	}
+
+	return almasland_sanitize_product_color( (string) $source->get_meta( '_almas_product_color' ) );
+}
+
+/**
+ * Render product color swatch markup.
+ *
+ * @param WC_Product|null $product Product.
+ * @param array           $args    Display args.
+ * @return string
+ */
+function almasland_render_product_color_swatch( $product, $args = array() ) {
+	$color = almasland_get_product_color( $product );
+	if ( '' === $color ) {
+		return '';
+	}
+
+	$args = wp_parse_args(
+		$args,
+		array(
+			'class'      => 'product-color-swatch',
+			'size'       => 'md',
+			'show_label' => false,
+			'label'      => __( 'رنگ', 'almas-land' ),
+		)
+	);
+
+	$size_class = sanitize_html_class( 'product-color-swatch--' . $args['size'] );
+	$classes    = trim( $args['class'] . ' ' . $size_class );
+	$aria_label = sprintf(
+		/* translators: %s: color hex code */
+		__( 'رنگ محصول: %s', 'almas-land' ),
+		$color
+	);
+
+	$swatch = sprintf(
+		'<span class="%1$s" style="background-color:%2$s;" title="%3$s" aria-hidden="true"></span>',
+		esc_attr( $classes ),
+		esc_attr( $color ),
+		esc_attr( $aria_label )
+	);
+
+	if ( ! $args['show_label'] ) {
+		return $swatch;
+	}
+
+	return sprintf(
+		'<span class="product-color-display"><span class="product-color-display__label">%1$s</span>%2$s<span class="screen-reader-text">%3$s</span></span>',
+		esc_html( $args['label'] ),
+		$swatch,
+		esc_html( $aria_label )
+	);
+}
+
+/**
+ * Render admin product color field.
+ *
+ * @param string $value Saved color.
+ */
+function almasland_render_product_color_field( $value = '' ) {
+	$value = almasland_sanitize_product_color( $value );
+	$picker_value = $value ? $value : '#000000';
+	?>
+	<p class="form-field _almas_product_color_field">
+		<label for="_almas_product_color"><?php esc_html_e( 'رنگ محصول', 'almas-land' ); ?></label>
+		<span class="almasland-product-color-field">
+			<input
+				type="text"
+				class="shorttext almasland-product-color-field__hex"
+				name="_almas_product_color"
+				id="_almas_product_color"
+				value="<?php echo esc_attr( $value ); ?>"
+				placeholder="#000000"
+				inputmode="text"
+				autocomplete="off"
+				spellcheck="false"
+				data-product-color-hex
+			>
+			<input
+				type="color"
+				class="almasland-product-color-field__picker"
+				value="<?php echo esc_attr( $picker_value ); ?>"
+				aria-label="<?php esc_attr_e( 'انتخاب رنگ', 'almas-land' ); ?>"
+				data-product-color-picker
+			>
+		</span>
+		<?php echo wc_help_tip( esc_html__( 'رنگ را با کد hex یا انتخابگر رنگ مشخص کنید. روی کارت و صفحه محصول به‌صورت دایره نمایش داده می‌شود.', 'almas-land' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+	</p>
+	<?php
+}
+
+/**
+ * Enqueue admin assets for product custom fields.
+ *
+ * @param string $hook Current admin page hook.
+ */
+function almasland_enqueue_product_fields_admin_assets( $hook ) {
+	if ( ! in_array( $hook, array( 'post.php', 'post-new.php' ), true ) ) {
+		return;
+	}
+
+	$screen = get_current_screen();
+	if ( ! $screen || 'product' !== $screen->post_type ) {
+		return;
+	}
+
+	wp_enqueue_style(
+		'almasland-admin-product-fields',
+		ALMASLAND_URI . '/assets/css/admin-product-fields.css',
+		array(),
+		ALMASLAND_VERSION
+	);
+
+	wp_enqueue_script(
+		'almasland-admin-product-fields',
+		ALMASLAND_URI . '/assets/js/admin-product-fields.js',
+		array(),
+		ALMASLAND_VERSION,
+		true
+	);
+}
+add_action( 'admin_enqueue_scripts', 'almasland_enqueue_product_fields_admin_assets' );
+
+/**
  * Add fields to product edit screen.
  */
 function almasland_add_product_fields() {
@@ -105,10 +277,16 @@ function almasland_add_product_fields() {
 		return;
 	}
 
-	echo '<div class="options_group">';
+	global $product_object;
+
+	echo '<div class="options_group almasland-product-fields">';
 	wp_nonce_field( 'almasland_save_product_fields', 'almasland_product_fields_nonce' );
 
 	foreach ( almasland_product_fields() as $key => $field ) {
+		if ( 'color' === $field['type'] ) {
+			continue;
+		}
+
 		$args = array(
 			'id'          => $key,
 			'label'       => $field['label'],
@@ -126,6 +304,9 @@ function almasland_add_product_fields() {
 			woocommerce_wp_text_input( $args );
 		}
 	}
+
+	$saved_color = $product_object instanceof WC_Product ? almasland_get_product_color( $product_object ) : '';
+	almasland_render_product_color_field( $saved_color );
 	echo '</div>';
 }
 add_action( 'woocommerce_product_options_general_product_data', 'almasland_add_product_fields' );
@@ -164,6 +345,8 @@ function almasland_save_product_fields( $product ) {
 			if ( ! array_key_exists( $value, $options ) ) {
 				$value = '';
 			}
+		} elseif ( 'color' === $field['type'] ) {
+			$value = almasland_sanitize_product_color( $value );
 		} else {
 			$value = sanitize_text_field( $value );
 		}

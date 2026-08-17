@@ -61,9 +61,11 @@ if ( ! $is_variable && WC()->cart ) {
 	}
 }
 
-$price_html      = $product->get_price_html();
-$buy_price_html = function_exists( 'almasland_get_buy_price_html' ) ? almasland_get_buy_price_html( $product ) : $price_html;
-$show_price     = $buy_price_html !== '';
+$price_html       = $product->get_price_html();
+$buy_price_html   = function_exists( 'almasland_get_buy_price_html' ) ? almasland_get_buy_price_html( $product ) : $price_html;
+$show_price       = $buy_price_html !== '';
+$has_buy_price    = function_exists( 'almasland_product_has_purchasable_price' ) ? almasland_product_has_purchasable_price( $product ) : true;
+$contact_phone    = almasland_get_phone_tel();
 ?>
 <article id="product-<?php the_ID(); ?>" <?php wc_product_class( $is_variable ? 'product--variable' : '', $product ); ?>>
 	<?php almasland_breadcrumb(); ?>
@@ -77,7 +79,6 @@ $show_price     = $buy_price_html !== '';
 			<?php endif; ?>
 
 			<h1 id="product-title"><?php echo esc_html( get_the_title() ); ?></h1>
-
 			<?php if ( $subtitle ) : ?>
 				<p class="product-title-en"><?php echo esc_html( $subtitle ); ?></p>
 			<?php endif; ?>
@@ -276,8 +277,14 @@ $show_price     = $buy_price_html !== '';
 		<?php else : ?>
 			<?php if ( $is_variable ) : ?>
 				<p class="buy-card__choose-hint"><?php esc_html_e( 'لطفاً گزینه‌های محصول را انتخاب کنید', 'almas-land' ); ?></p>
+				<?php woocommerce_template_single_add_to_cart(); ?>
+			<?php elseif ( ! $has_buy_price ) : ?>
+				<a class="btn btn--primary btn--block buy-card__contact-cta" href="tel:<?php echo esc_attr( $contact_phone ); ?>">
+					<?php esc_html_e( 'تماس بگیرید', 'almas-land' ); ?>
+				</a>
+			<?php else : ?>
+				<?php woocommerce_template_single_add_to_cart(); ?>
 			<?php endif; ?>
-			<?php woocommerce_template_single_add_to_cart(); ?>
 		<?php endif; ?>
 
 		<a class="buy-card__digipay" href="<?php echo esc_url( almasland_get_contact_url() ); ?>">
@@ -370,6 +377,8 @@ $show_price     = $buy_price_html !== '';
 	<?php endif; ?>
 	<?php if ( $is_in_cart ) : ?>
 		<a class="btn btn--primary" href="<?php echo esc_url( wc_get_cart_url() ); ?>"><?php esc_html_e( 'مشاهده سبد خرید', 'almas-land' ); ?></a>
+	<?php elseif ( ! $has_buy_price && ! $is_variable ) : ?>
+		<a class="btn btn--primary" href="tel:<?php echo esc_attr( $contact_phone ); ?>"><?php esc_html_e( 'تماس بگیرید', 'almas-land' ); ?></a>
 	<?php else : ?>
 		<button class="btn btn--primary" type="button" data-mobile-add-to-cart><?php echo esc_html( $is_variable ? __( 'انتخاب و افزودن به سبد', 'almas-land' ) : __( 'افزودن به سبد خرید', 'almas-land' ) ); ?></button>
 	<?php endif; ?>

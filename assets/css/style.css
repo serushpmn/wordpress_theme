@@ -1400,16 +1400,22 @@ main {
   padding: var(--space-4);
 }
 
+.product-card__info {
+  display: grid;
+  gap: 6px;
+  width: 100%;
+}
+
 .product-card__title {
   direction: rtl;
-  text-align: center;
+  text-align: right;
   display: -webkit-box;
-  min-height: 52px;
+  min-height: 0;
   overflow: hidden;
   color: var(--color-text);
   font-size: 14px;
   font-weight: 800;
-  line-height: 1.30;
+  line-height: 1.45;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
 }
@@ -1427,9 +1433,9 @@ main {
 
 .product-card--used .product-card__body,
 .product-card--storefront .product-card__body {
-  align-items: center;
-  text-align: center;
-  justify-content: space-between;
+  align-items: stretch;
+  text-align: right;
+  justify-content: flex-start;
   gap: 8px;
   padding-top: var(--space-2);
 }
@@ -1441,6 +1447,7 @@ main {
   font-size: clamp(0.9rem, 1.05vw, 1rem);
   font-weight: 700;
   line-height: 1.45;
+  text-align: right;
 }
 
 .product-card__specs {
@@ -1452,18 +1459,69 @@ main {
   font-size: clamp(0.74rem, 0.9vw, 0.84rem);
   font-weight: 500;
   line-height: 1.5;
+  text-align: right;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
 }
 
 .product-card__stock {
-  margin-inline: auto;
+  margin-inline: 0;
+}
+
+.product-card__tags {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  width: fit-content;
+}
+
+.product-card__tags .product-card__grade {
+  margin: 0;
+}
+
+.product-color-swatch {
+  display: inline-block;
+  flex-shrink: 0;
+  border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.35);
+}
+
+.product-color-swatch--sm {
+  width: 14px;
+  height: 14px;
+}
+
+.product-color-swatch--md {
+  width: 16px;
+  height: 16px;
+}
+
+.product-color-swatch--lg {
+  width: 20px;
+  height: 20px;
+}
+
+.product-color-display {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  color: var(--color-muted);
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.product-color-display__label {
+  color: var(--color-muted);
 }
 
 .product-card__grade {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  width: fit-content;
   padding: 4px 12px;
   border-radius: 999px;
   font-size: 0.75rem;
@@ -1494,6 +1552,85 @@ main {
 .product-card__grade--default {
   background: #eef2ff;
   color: var(--color-secondary);
+}
+
+/* Shared modern pricing footer for product cards */
+.almas-card-pricing {
+  display: grid;
+  gap: 4px;
+  width: 100%;
+  margin-top: auto;
+  padding-top: 8px;
+}
+
+.almas-card-pricing__deals {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  width: 100%;
+}
+
+.almas-card-pricing__discount {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 24px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-primary) 12%, var(--color-surface));
+  color: var(--color-primary);
+  font-size: 0.72rem;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.almas-card-pricing__old {
+  color: var(--color-muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+  line-height: 1.2;
+  text-decoration: line-through;
+}
+
+.almas-card-pricing__final {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-end;
+  gap: 6px;
+  color: var(--color-secondary);
+  font-size: clamp(1.08rem, 1.35vw, 1.28rem);
+  font-weight: 900;
+  line-height: 1.15;
+}
+
+.almas-card-pricing__final .almasland-card-price__amount {
+  letter-spacing: -0.01em;
+}
+
+.almas-card-pricing__cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 42px;
+  margin-top: auto;
+  padding: 0 14px;
+  border-radius: 12px;
+  background: #64748b;
+  color: #fff;
+  font-size: 0.88rem;
+  font-weight: 700;
+  line-height: 1.2;
+  text-decoration: none;
+  transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+.almas-card-pricing__cta:hover,
+.almas-card-pricing__cta:focus-visible {
+  background: #475569;
+  color: #fff;
+  outline: none;
 }
 
 .product-card__prices {
@@ -1593,9 +1730,18 @@ main {
 }
 
 .product-card__rating {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  width: fit-content;
   color: var(--color-warning);
   font-size: 12px;
   font-weight: 800;
+}
+
+.product-card__rating svg {
+  width: 14px;
+  height: 14px;
 }
 
 .stock {
@@ -2823,8 +2969,8 @@ input[type="text"] {
   flex-direction: column;
   gap: 10px;
   width: 100%;
-  max-width: 280px;
-  height: auto;
+  max-width: 380px;
+  height: 100%;
   max-height: calc(100vh - var(--header-height) - 24px);
   padding: 12px;
   border: 1px solid rgba(15, 23, 42, 0.06);
@@ -2938,6 +3084,15 @@ input[type="text"] {
   font-weight: 900;
   letter-spacing: -0.02em;
   line-height: 1.1;
+}
+
+.buy-card__price-current--contact {
+  color: var(--color-primary);
+  font-size: clamp(1.2rem, 1.55vw, 1.4rem);
+}
+
+.buy-card__contact-cta {
+  width: 100%;
 }
 
 .buy-card__price-current .woocommerce-Price-amount,
@@ -4457,6 +4612,28 @@ body.is-modal-open {
   background: var(--color-muted-line);
 }
 
+[data-theme="dark"] .almas-card-pricing__discount {
+  background: color-mix(in srgb, var(--color-primary) 18%, var(--color-surface));
+  color: color-mix(in srgb, var(--color-primary) 82%, #fff);
+}
+
+[data-theme="dark"] .almas-card-pricing__final {
+  color: var(--color-text);
+}
+
+[data-theme="dark"] .almas-card-pricing__old {
+  color: var(--color-muted);
+}
+
+[data-theme="dark"] .almas-card-pricing__cta {
+  background: var(--color-muted-mid);
+}
+
+[data-theme="dark"] .almas-card-pricing__cta:hover,
+[data-theme="dark"] .almas-card-pricing__cta:focus-visible {
+  background: var(--color-muted-line);
+}
+
 [data-theme="dark"] .buy-card__digipay-chevron,
 [data-theme="dark"] .buy-card__trust-icon {
   color: var(--color-muted);
@@ -5749,40 +5926,11 @@ body.is-modal-open {
 }
 
 .product-card__meta {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: center;
-  gap: 8px 12px;
-  width: 100%;
-}
-
-.product-card__rating {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  color: #f59e0b;
-  font-size: 12px;
-  font-weight: 800;
-}
-
-.product-card__rating svg {
-  width: 14px;
-  height: 14px;
-}
-
-.shop-archive .product-card--storefront .product-card__meta {
-  justify-content: space-between;
-  width: 100%;
-}
-
-.shop-archive .product-card--storefront .product-card__prices {
-  justify-content: flex-start;
-}
-
-.shop-archive .product-card--storefront .product-card__stock,
-.shop-archive .product-card--storefront .product-card__specs {
   display: none;
+}
+
+.shop-archive .product-card--storefront .product-card__specs {
+  display: -webkit-box;
 }
 
 .shop-filter-panel .shop-filter-form {
@@ -6011,8 +6159,9 @@ body.is-modal-open {
 }
 
 .product-grid--list .product-card--used .product-card__prices,
-.product-grid--list .product-card--storefront .product-card__prices {
-  justify-content: flex-start;
+.product-grid--list .product-card--storefront .product-card__prices,
+.product-grid--list .product-card--storefront .almas-card-pricing {
+  justify-self: end;
 }
 
 .product-grid--list .product-card__media {
@@ -8136,6 +8285,15 @@ p.no-comments {
   font-weight: 900;
   letter-spacing: -0.02em;
   line-height: 1.1;
+}
+
+.buy-card__price-current--contact {
+  color: var(--color-primary);
+  font-size: clamp(1.2rem, 1.55vw, 1.4rem);
+}
+
+.buy-card__contact-cta {
+  width: 100%;
 }
 
 .buy-card__price-current .woocommerce-Price-amount,

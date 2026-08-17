@@ -718,6 +718,39 @@ function almasland_get_discount_percent( $product ) {
 }
 
 /**
+ * Whether the product has a numeric price greater than zero for buy-card display.
+ *
+ * @param WC_Product|null $product Product.
+ * @return bool
+ */
+function almasland_product_has_purchasable_price( $product ) {
+	if ( ! $product instanceof WC_Product || ! $product->is_in_stock() ) {
+		return false;
+	}
+
+	if ( $product->is_type( 'variable' ) ) {
+		return (float) $product->get_variation_price( 'min', true ) > 0;
+	}
+
+	$raw_price = $product->get_price();
+
+	if ( '' === $raw_price || null === $raw_price ) {
+		return false;
+	}
+
+	return (float) wc_get_price_to_display( $product ) > 0;
+}
+
+/**
+ * Buy-card fallback when no price is set.
+ *
+ * @return string
+ */
+function almasland_get_buy_price_contact_html() {
+	return '<strong class="buy-card__price-current buy-card__price-current--contact">' . esc_html__( 'تماس بگیرید', 'almas-land' ) . '</strong>';
+}
+
+/**
  * Buy-card price markup: current price on top, discount badge + strikethrough below.
  *
  * @param WC_Product $product Product or variation.
@@ -751,6 +784,11 @@ function almasland_get_buy_price_html( $product ) {
 			$regular    = 0;
 		}
 	} else {
+		$raw_price = $product->get_price();
+		if ( '' === $raw_price || null === $raw_price ) {
+			return almasland_get_buy_price_contact_html();
+		}
+
 		$current  = (float) wc_get_price_to_display( $product );
 		$regular  = ( '' !== $product->get_regular_price() )
 			? (float) wc_get_price_to_display( $product, array( 'price' => $product->get_regular_price() ) )
@@ -759,7 +797,7 @@ function almasland_get_buy_price_html( $product ) {
 	}
 
 	if ( $current <= 0 ) {
-		return '';
+		return almasland_get_buy_price_contact_html();
 	}
 
 	ob_start();

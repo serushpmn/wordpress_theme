@@ -861,7 +861,7 @@
 }
 
 .front-page-offer-card__grade {
-  align-self: center;
+  align-self: flex-start;
   padding: 4px 10px;
   border-radius: 999px;
   font-size: 0.72rem;
@@ -895,11 +895,7 @@
 }
 
 .front-page-offer-card__prices {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 4px;
-  margin-top: auto;
+  display: none;
 }
 
 .front-page-offer-card__price {
@@ -1458,11 +1454,12 @@
   display: flex;
   flex: 1;
   flex-direction: column;
-  align-items: center;
-  justify-content: space-between;
+  align-items: stretch;
+  justify-content: flex-start;
   gap: 8px;
   width: 100%;
   min-width: 0;
+  text-align: right;
 }
 
 .front-page-catalog-card__title {
@@ -1492,6 +1489,7 @@
 .front-page-catalog-card__grade {
   display: inline-flex;
   align-items: center;
+  align-self: flex-start;
   padding: 4px 10px;
   border-radius: 999px;
   font-size: 0.72rem;
@@ -1525,12 +1523,17 @@
 }
 
 .front-page-catalog-card__prices {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
+  display: none;
+}
+
+.front-page-catalog-card__body .almas-card-pricing,
+.front-page-offer-card__body .almas-card-pricing {
   margin-top: auto;
+}
+
+.front-page-catalog-card__cta,
+.front-page-offer-card__cart {
+  display: none;
 }
 
 .front-page-catalog-card__price {
