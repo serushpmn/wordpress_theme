@@ -223,6 +223,37 @@ function almasland_site_logo() {
  *
  * @return string
  */
+function almasland_get_page_by_title( $title, $post_type = 'page' ) {
+	$title = trim( (string) $title );
+	if ( '' === $title ) {
+		return null;
+	}
+
+	$query = new WP_Query(
+		array(
+			'post_type'              => $post_type,
+			'title'                  => $title,
+			'post_status'            => 'publish',
+			'posts_per_page'         => 1,
+			'no_found_rows'          => true,
+			'ignore_sticky_posts'    => true,
+			'update_post_term_cache' => false,
+			'update_post_meta_cache' => false,
+		)
+	);
+
+	if ( ! empty( $query->posts[0] ) ) {
+		return $query->posts[0];
+	}
+
+	return null;
+}
+
+/**
+ * Get contact page URL.
+ *
+ * @return string
+ */
 function almasland_get_contact_url() {
 	$page_id = absint( almasland_get_option( 'contact_page_id', 0 ) );
 	if ( $page_id ) {
@@ -237,7 +268,7 @@ function almasland_get_contact_url() {
 		return get_permalink( $page );
 	}
 
-	$contact_page = get_page_by_title( 'تماس' );
+	$contact_page = almasland_get_page_by_title( 'تماس' );
 	if ( $contact_page ) {
 		return get_permalink( $contact_page );
 	}
