@@ -32,7 +32,7 @@ $rating           = $product->get_average_rating();
 $stock_qty   = $product->get_stock_quantity();
 $is_variable = $product->is_type( 'variable' );
 $is_used_product = function_exists( 'almasland_is_used_product' ) ? almasland_is_used_product( $product ) : has_term( 'used', 'product_cat', $product->get_id() );
-$apsb_specs_html  = $is_used_product && function_exists( 'apsb_render_product_specs' ) ? apsb_render_product_specs( $product->get_id() ) : '';
+$has_used_health_report = $is_used_product && function_exists( 'almasland_product_has_used_health_report' ) && almasland_product_has_used_health_report( $product );
 $stock_label = $is_variable
 	? esc_html__( 'موجودی پس از انتخاب گزینه مشخص می‌شود', 'almas-land' )
 	: (
@@ -88,6 +88,9 @@ $contact_phone    = almasland_get_phone_tel();
 <section class="product-wrapper-content<?php echo $is_used_product ? ' product-wrapper-content--used' : ''; ?>">
 	<section class="product-main-content">
 		<section class="product-summary<?php echo $is_used_product ? ' product-summary--used' : ''; ?>" aria-labelledby="product-title">
+			<?php if ( $has_used_health_report ) : ?>
+				<div class="product-media-column">
+			<?php endif; ?>
 			<div class="product-gallery" aria-label="<?php esc_attr_e( 'تصاویر محصول', 'almas-land' ); ?>">
 				<div class="product-gallery__stage">
 					<div class="product-gallery__main">
@@ -117,32 +120,18 @@ $contact_phone    = almasland_get_phone_tel();
 					</div>
 				<?php endif; ?>
 			</div>
+			<?php if ( $has_used_health_report ) : ?>
+				<?php almasland_render_used_product_gallery_panel( $product ); ?>
+				</div>
+			<?php endif; ?>
 
 			<div class="product-info<?php echo $is_used_product ? ' product-info--used' : ''; ?>">
 			<?php if ( $brand ) : ?>
 				<p class="product-info__brand"><?php esc_html_e( 'برند:', 'almas-land' ); ?> <strong><?php echo esc_html( $brand ); ?></strong></p>
 			<?php endif; ?>
 
-			<?php if ( $is_used_product && $apsb_specs_html ) : ?>
-				<section class="product-info-apsb" aria-labelledby="used-product-specs-title">
-					<div class="product-info-apsb__header">
-						<h2 id="used-product-specs-title"><?php esc_html_e( 'گزارش وضعیت و سلامت دستگاه', 'almas-land' ); ?></h2>
-						<p><?php esc_html_e( 'دستگاه توسط کارشناسان الماس لند بررسی و تست شده است.', 'almas-land' ); ?></p>
-					</div>
-					<div class="product-info-apsb__body">
-						<?php echo $apsb_specs_html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
-					</div>
-					<div class="product-info-apsb__footer">
-						<div class="product-info-apsb__trust">
-							<span class="product-info-apsb__trust-icon" aria-hidden="true">✓</span>
-							<div>
-								<h3><?php esc_html_e( 'تست و بررسی شده توسط کارشناسان الماس لند', 'almas-land' ); ?></h3>
-								<p><?php esc_html_e( 'ما به شفافیت در فروش اعتماد داریم. هر دستگاه قبل از فروش به صورت کامل بررسی و تست می‌شود.', 'almas-land' ); ?></p>
-							</div>
-						</div>
-						
-					</div>
-				</section>
+			<?php if ( $is_used_product ) : ?>
+				<?php almasland_render_used_device_health_report( $product ); ?>
 			<?php else : ?>
 				<?php if ( $summary_specs ) : ?>
 					<dl class="product-spec-list" aria-label="<?php esc_attr_e( 'مشخصات کوتاه محصول', 'almas-land' ); ?>">
