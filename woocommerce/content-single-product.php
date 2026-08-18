@@ -236,7 +236,7 @@ $contact_phone    = almasland_get_phone_tel();
 					echo esc_html(
 						$warranty_text
 							? $warranty_text
-							: __( '۱۸ ماه گارانتی معتبر', 'almas-land' )
+							: __( 'یک هفته مهلت تست', 'almas-land' )
 					);
 					?>
 				</strong>

@@ -612,6 +612,7 @@
 /* Special offers slider */
 .front-page-offers {
   --offers-accent: var(--color-primary);
+  --offers-secondary: var(--color-text-strong);
   --offers-price: var(--color-secondary);
   --offers-muted: #8b95a8;
 }
@@ -809,6 +810,7 @@
 }
 
 .front-page-offer-card__media {
+  position: relative;
   display: grid;
   place-items: center;
   flex: 0 0 auto;
@@ -816,6 +818,7 @@
   margin-bottom: 12px;
   padding-top: 18px;
   text-decoration: none;
+  overflow: hidden;
 }
 
 .front-page-offer-card__media img {
@@ -1031,6 +1034,10 @@
   background: var(--color-surface, #1a2030);
   border-color: rgba(255, 255, 255, 0.08);
   box-shadow: 0 10px 28px rgba(0, 0, 0, 0.22);
+}
+
+[data-theme="dark"] .front-page-offer-card__title {
+  color: var(--color-text-strong, #edf4ff);
 }
 
 [data-theme="dark"] .front-page-offers__nav,
@@ -1297,6 +1304,7 @@
 /* Catalog with category filters */
 .front-page-catalog {
   --catalog-accent: var(--color-primary);
+  --catalog-secondary: var(--color-text-strong);
   --catalog-muted: #8b95a8;
   --catalog-price: var(--color-secondary);
 }
@@ -1434,10 +1442,12 @@
 }
 
 .front-page-catalog-card__media {
+  position: relative;
   display: grid;
   place-items: center;
   width: 100%;
   height: 150px;
+  overflow: hidden;
 }
 
 .front-page-catalog-card__media img {
@@ -1686,6 +1696,10 @@
   background: var(--color-surface, #1a2030);
   border-color: rgba(255, 255, 255, 0.08);
   box-shadow: 0 10px 28px rgba(0, 0, 0, 0.22);
+}
+
+[data-theme="dark"] .front-page-catalog-card__title {
+  color: var(--color-text-strong, #edf4ff);
 }
 
 [data-theme="dark"] .front-page-catalog-card__specs {

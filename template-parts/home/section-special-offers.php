@@ -60,6 +60,7 @@ $view_all_url = add_query_arg( 'on_sale', '1', wc_get_page_permalink( 'shop' ) )
 
 					<a class="front-page-offer-card__media" href="<?php echo esc_url( $product_link ); ?>">
 						<?php echo wp_kses_post( $product->get_image( 'almasland-card', array( 'loading' => 'lazy', 'decoding' => 'async' ) ) ); ?>
+						<?php almasland_render_product_used_badge( $product ); ?>
 					</a>
 
 					<div class="front-page-offer-card__body">

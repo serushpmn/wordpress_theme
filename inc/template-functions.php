@@ -1324,6 +1324,29 @@ function almasland_is_used_product( $product ) {
 }
 
 /**
+ * Render the used-product badge for catalog cards.
+ *
+ * @param WC_Product|null $product Product.
+ * @return void
+ */
+function almasland_render_product_used_badge( $product ) {
+	if ( ! almasland_is_used_product( $product ) ) {
+		return;
+	}
+	?>
+	<span class="product-used-badge">
+		<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+			<path d="M7.5 7.2 4.8 9.8l2.7 2.6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+			<path d="M5.2 9.8h9.6a4.2 4.2 0 0 1 0 8.4H12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+			<path d="m16.5 16.8 2.7-2.6-2.7-2.6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+			<path d="M18.8 14.2H9.2a4.2 4.2 0 0 1 0-8.4H12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+		</svg>
+		<?php esc_html_e( 'کالای دست دوم', 'almas-land' ); ?>
+	</span>
+	<?php
+}
+
+/**
  * Short one-line summary for product cards (admin field only — never attributes).
  *
  * @param WC_Product $product Product.
@@ -1594,6 +1617,7 @@ function almasland_get_home_catalog_card_html( $product ) {
 	<article class="<?php echo esc_attr( $card_class ); ?>">
 		<a class="front-page-catalog-card__media" href="<?php echo esc_url( $product_link ); ?>">
 			<?php echo wp_kses_post( $product->get_image( 'almasland-card', array( 'loading' => 'lazy', 'decoding' => 'async' ) ) ); ?>
+			<?php almasland_render_product_used_badge( $product ); ?>
 		</a>
 		<div class="front-page-catalog-card__body">
 			<a class="front-page-catalog-card__title" href="<?php echo esc_url( $product_link ); ?>">

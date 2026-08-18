@@ -44,6 +44,11 @@ if ( $grade && ! empty( $grade['bg'] ) ) {
 	</button>
 	<a class="product-card__media" href="<?php echo esc_url( $product_link ); ?>">
 		<?php echo wp_kses_post( $product->get_image( 'almasland-card' ) ); ?>
+		<?php
+		if ( function_exists( 'almasland_render_product_used_badge' ) ) {
+			almasland_render_product_used_badge( $product );
+		}
+		?>
 	</a>
 	<div class="product-card__body">
 		<div class="product-card__info">

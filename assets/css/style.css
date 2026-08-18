@@ -1375,6 +1375,7 @@ main {
 }
 
 .product-card__media {
+  position: relative;
   display: grid;
   place-items: center;
   height: 240px;
@@ -1382,6 +1383,7 @@ main {
   border-bottom: 1px solid var(--color-border);
   background: linear-gradient(180deg, var(--color-white), var(--color-surface-card));
   border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  overflow: hidden;
 }
 
 .product-card__media img {
@@ -1445,7 +1447,7 @@ main {
 .product-card--used .product-card__title,
 .product-card--storefront .product-card__title {
   min-height: 0;
-  color: var(--color-secondary);
+  color: var(--color-text-strong);
   font-size: clamp(0.9rem, 1.05vw, 1rem);
   font-weight: 700;
   line-height: 1.45;
@@ -1460,7 +1462,7 @@ main {
   font-size: clamp(0.74rem, 0.9vw, 0.84rem);
   font-weight: 500;
   line-height: 1.5;
-  text-align: right;
+  text-align: center;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
 }
@@ -1606,6 +1608,36 @@ main {
   color: var(--color-secondary);
 }
 
+.product-used-badge {
+  position: absolute;
+  z-index: 2;
+  right: 10px;
+  bottom: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  max-width: calc(100% - 20px);
+  padding: 5px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 999px;
+  background: linear-gradient(135deg, rgba(17, 24, 39, 0.82), rgba(36, 87, 214, 0.72));
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.22);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  pointer-events: none;
+  backdrop-filter: blur(10px);
+}
+
+.product-used-badge svg {
+  flex-shrink: 0;
+  width: 13px;
+  height: 13px;
+}
+
 /* Shared modern pricing footer for product cards */
 .almas-card-pricing {
   display: grid;
@@ -1652,7 +1684,7 @@ main {
   justify-content: flex-end;
   gap: 6px;
   color: var(--color-secondary);
-  font-size: clamp(1.08rem, 1.35vw, 1.28rem);
+  font-size: clamp(1.08rem, 1.35vw, 1.48rem);
   font-weight: 900;
   line-height: 1.15;
 }
@@ -1785,6 +1817,7 @@ main {
 .product-card__rating {
   display: inline-flex;
   align-items: center;
+  align-self: center;
   gap: 4px;
   width: fit-content;
   color: var(--color-warning);
@@ -4585,6 +4618,18 @@ body.is-modal-open {
   border-color: rgba(255, 255, 255, 0.14);
 }
 
+[data-theme="dark"] .product-card__title,
+[data-theme="dark"] .product-card--used .product-card__title,
+[data-theme="dark"] .product-card--storefront .product-card__title {
+  color: var(--color-text-strong);
+}
+
+[data-theme="dark"] .product-used-badge {
+  border-color: rgba(255, 255, 255, 0.16);
+  background: linear-gradient(135deg, rgba(8, 13, 25, 0.88), rgba(36, 87, 214, 0.55));
+  color: #edf4ff;
+}
+
 [data-theme="dark"] .product-card__media {
   background: color-mix(in srgb, var(--color-surface) 88%, #000);
 }
@@ -5333,6 +5378,19 @@ body.is-modal-open {
   .product-card__title {
     min-height: 48px;
     font-size: 12px;
+  }
+
+  .product-used-badge {
+    right: 8px;
+    bottom: 8px;
+    padding: 4px 8px;
+    font-size: 10px;
+    gap: 4px;
+  }
+
+  .product-used-badge svg {
+    width: 11px;
+    height: 11px;
   }
 
   .price ins {

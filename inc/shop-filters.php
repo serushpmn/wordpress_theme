@@ -477,6 +477,99 @@ function almasland_apply_shop_filters( $query ) {
 add_action( 'woocommerce_product_query', 'almasland_apply_shop_filters', 20 );
 
 /**
+ * Whether the query is a front-end WooCommerce catalog/archive listing.
+ *
+ * @param WP_Query $query Query.
+ * @return bool
+ */
+function almasland_is_product_catalog_query( $query ) {
+	if ( is_admin() || ! $query instanceof WP_Query || ! $query->is_main_query() ) {
+		return false;
+	}
+
+	if ( function_exists( 'is_shop' ) && ( is_shop() || is_product_taxonomy() ) ) {
+		return true;
+	}
+
+	if ( $query->is_search() ) {
+		$post_type = $query->get( 'post_type' );
+
+		if ( 'product' === $post_type ) {
+			return true;
+		}
+
+		if ( is_array( $post_type ) && in_array( 'product', $post_type, true ) ) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
+/**
+ * Flag catalog queries so out-of-stock products are listed last.
+ *
+ * @param WP_Query $query Query.
+ * @return void
+ */
+function almasland_enable_out_of_stock_last_sorting( $query ) {
+	if ( ! almasland_is_product_catalog_query( $query ) ) {
+		return;
+	}
+
+	$state = almasland_get_shop_filter_state();
+	if ( ! empty( $state['in_stock'] ) ) {
+		return;
+	}
+
+	$query->set( 'almasland_stock_sort', true );
+}
+add_action( 'woocommerce_product_query', 'almasland_enable_out_of_stock_last_sorting', 30 );
+
+/**
+ * Push out-of-stock items to the end while preserving the active sort order.
+ *
+ * @param string[] $clauses SQL clauses.
+ * @param WP_Query $query   Query.
+ * @return string[]
+ */
+function almasland_sort_out_of_stock_last_clauses( $clauses, $query ) {
+	if ( ! $query instanceof WP_Query || ! $query->get( 'almasland_stock_sort' ) ) {
+		return $clauses;
+	}
+
+	global $wpdb;
+
+	$stock_order = '';
+
+	if ( ! empty( $wpdb->wc_product_meta_lookup ) ) {
+		$lookup_table = $wpdb->wc_product_meta_lookup;
+
+		if ( false === strpos( $clauses['join'], 'almasland_stock_lookup' ) ) {
+			$clauses['join'] .= " LEFT JOIN {$lookup_table} AS almasland_stock_lookup ON {$wpdb->posts}.ID = almasland_stock_lookup.product_id ";
+		}
+
+		$stock_order = "CASE almasland_stock_lookup.stock_status WHEN 'instock' THEN 0 WHEN 'onbackorder' THEN 1 WHEN 'outofstock' THEN 2 ELSE 3 END ASC";
+	} elseif ( false === strpos( $clauses['join'], 'almasland_stock_status' ) ) {
+		$clauses['join'] .= " LEFT JOIN {$wpdb->postmeta} AS almasland_stock_status ON ({$wpdb->posts}.ID = almasland_stock_status.post_id AND almasland_stock_status.meta_key = '_stock_status') ";
+		$stock_order     = "CASE almasland_stock_status.meta_value WHEN 'instock' THEN 0 WHEN 'onbackorder' THEN 1 WHEN 'outofstock' THEN 2 ELSE 3 END ASC";
+	}
+
+	if ( '' === $stock_order ) {
+		return $clauses;
+	}
+
+	if ( ! empty( $clauses['orderby'] ) ) {
+		$clauses['orderby'] = $stock_order . ', ' . $clauses['orderby'];
+	} else {
+		$clauses['orderby'] = $stock_order . ', ' . $wpdb->posts . '.post_date DESC';
+	}
+
+	return $clauses;
+}
+add_filter( 'posts_clauses', 'almasland_sort_out_of_stock_last_clauses', 10000, 2 );
+
+/**
  * Drop empty/zero price query args before WooCommerce reads them.
  *
  * Empty number inputs still submit as "" which WC casts to 0 and then
