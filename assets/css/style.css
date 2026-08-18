@@ -4387,6 +4387,95 @@ body.is-modal-open {
   color: var(--footer-muted);
 }
 
+.footer-enamad {
+  display: inline-flex;
+  margin-top: 4px;
+  max-width: 180px;
+  border-radius: 10px;
+  overflow: hidden;
+  line-height: 0;
+}
+
+.footer-enamad img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.footer-enamad:hover {
+  opacity: 0.92;
+}
+
+.footer-trust {
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.footer-trust-strip {
+  padding: clamp(18px, 2.5vw, 24px) 0;
+}
+
+.footer-trust-strip__list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem 1.25rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.footer-trust-strip__item {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-width: 0;
+  color: var(--footer-text);
+  font-size: 0.8125rem;
+  line-height: 1.55;
+}
+
+.footer-trust-strip__icon {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 999px;
+  color: var(--footer-heading);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.footer-trust-strip__icon-svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.footer-trust-badges {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0 0 clamp(18px, 2.5vw, 24px);
+}
+
+.footer-trust-badges__link,
+.footer-trust-badges__item {
+  display: inline-flex;
+  line-height: 0;
+}
+
+.footer-trust-badges__link--enamad,
+.footer-trust-badges__image {
+  display: block;
+  max-width: 180px;
+  height: auto;
+  border-radius: 10px;
+}
+
+.footer-trust-badges__link:hover {
+  opacity: 0.92;
+}
+
 .footer-socials {
   display: flex;
   align-items: center;
@@ -4440,7 +4529,6 @@ body.is-modal-open {
 
 .footer-services,
 .footer-info,
-.footer-trust-badges,
 .trust-box {
   display: none;
 }
@@ -5478,6 +5566,10 @@ body.is-modal-open {
     grid-column: 1 / -1;
   }
 
+  .footer-trust-strip__list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .cart-item {
     grid-template-columns: 96px minmax(0, 1fr);
   }
@@ -5817,6 +5909,10 @@ body.is-modal-open {
     flex-direction: column;
     justify-content: center;
     padding: var(--space-4) 0;
+  }
+
+  .footer-trust-strip__list {
+    grid-template-columns: 1fr;
   }
 }
 

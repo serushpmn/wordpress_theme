@@ -1954,6 +1954,180 @@ function almasland_footer_social_links() {
 }
 
 /**
+ * Footer trust highlights shown above badges.
+ *
+ * @return array<int, array{icon: string, text: string}>
+ */
+function almasland_get_footer_trust_highlights() {
+	$items = array(
+		array(
+			'icon' => 'truck',
+			'text' => __( 'امکان تحویل اکسپرس', 'almas-land' ),
+		),
+		array(
+			'icon' => 'shield',
+			'text' => __( 'پرداخت امن اینترنتی', 'almas-land' ),
+		),
+		array(
+			'icon' => 'return',
+			'text' => __( '۴۸ ساعت ضمانت بازگشت کالا', 'almas-land' ),
+		),
+		array(
+			'icon' => 'check',
+			'text' => __( 'ضمانت اصل بودن کالا', 'almas-land' ),
+		),
+		array(
+			'icon' => 'support',
+			'text' => __( 'پشتیبانی تخصصی خرید', 'almas-land' ),
+		),
+		array(
+			'icon' => 'box',
+			'text' => __( 'بسته‌بندی ایمن و استاندارد', 'almas-land' ),
+		),
+	);
+
+	/**
+	 * Filter footer trust highlight items.
+	 *
+	 * @param array<int, array{icon: string, text: string}> $items Items.
+	 */
+	return apply_filters( 'almasland_footer_trust_highlights', $items );
+}
+
+/**
+ * Inline icon for footer trust highlights.
+ *
+ * @param string $icon Icon id.
+ * @return string
+ */
+function almasland_footer_trust_icon( $icon ) {
+	$icons = array(
+		'truck'   => '<path d="M3 7h11v8H3V7Z" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M14 10h3l2 2v3h-5v-5Z" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="7" cy="17" r="1.6" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="17" cy="17" r="1.6" fill="none" stroke="currentColor" stroke-width="1.6"/>',
+		'shield'  => '<path d="M12 3 19 6v6c0 4.2-2.8 7.4-7 9-4.2-1.6-7-4.8-7-9V6l7-3Z" fill="none" stroke="currentColor" stroke-width="1.6"/>',
+		'return'  => '<path d="M20 8v6a2 2 0 0 1-2 2H8" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="m5 11-3-3 3-3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>',
+		'check'   => '<path d="m8.5 12.2 2.2 2.2 4.8-4.8" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.6"/>',
+		'support' => '<path d="M5 6h14a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H9l-4 3v-3H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>',
+		'box'     => '<path d="M4 8 12 4l8 4-8 4-8-4Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M4 8v8l8 4 8-4V8" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>',
+	);
+
+	if ( ! isset( $icons[ $icon ] ) ) {
+		return '';
+	}
+
+	return '<svg class="footer-trust-strip__icon-svg" viewBox="0 0 24 24" aria-hidden="true" focusable="false">' . $icons[ $icon ] . '</svg>';
+}
+
+/**
+ * e-Namad URL from theme panel.
+ *
+ * @return string
+ */
+function almasland_get_footer_enamad_url() {
+	$url = function_exists( 'almasland_get_panel' )
+		? almasland_get_panel( 'footer', 'enamad_url', '' )
+		: '';
+
+	if ( ! $url ) {
+		$url = 'https://trustseal.enamad.ir/?id=576236&Code=Rm9yFPbIrrgOK8hJAHxwSrjcCcc4crzd';
+	}
+
+	return esc_url( $url );
+}
+
+/**
+ * e-Namad image URL from panel or theme default.
+ *
+ * @return string
+ */
+function almasland_get_footer_enamad_image_url() {
+	$image_id = function_exists( 'almasland_get_panel' ) ? absint( almasland_get_panel( 'footer', 'enamad_image', 0 ) ) : 0;
+
+	if ( $image_id ) {
+		$src = wp_get_attachment_image_url( $image_id, 'medium' );
+		if ( $src ) {
+			return esc_url( $src );
+		}
+	}
+
+	return esc_url( ALMASLAND_URI . '/assets/images/enamad.png' );
+}
+
+/**
+ * Render footer trust strip and badge row.
+ *
+ * @return void
+ */
+function almasland_render_footer_trust_section() {
+	$footer_settings = function_exists( 'almasland_get_panel_settings' ) ? almasland_get_panel_settings()['footer'] : array();
+	$highlights      = almasland_get_footer_trust_highlights();
+	$badge_ids       = array(
+		absint( $footer_settings['trust_badge_1'] ?? 0 ),
+		absint( $footer_settings['trust_badge_2'] ?? 0 ),
+		absint( $footer_settings['samandehi'] ?? 0 ),
+	);
+	$has_badges      = ! empty( almasland_get_footer_enamad_url() );
+
+	foreach ( $badge_ids as $badge_id ) {
+		if ( $badge_id > 0 ) {
+			$has_badges = true;
+			break;
+		}
+	}
+
+	if ( empty( $highlights ) && ! $has_badges ) {
+		return;
+	}
+	?>
+	<div class="footer-trust">
+		<?php if ( ! empty( $highlights ) ) : ?>
+			<div class="container footer-trust-strip" aria-label="<?php esc_attr_e( 'مزیت‌های خرید از الماس لند', 'almas-land' ); ?>">
+				<ul class="footer-trust-strip__list">
+					<?php foreach ( $highlights as $item ) : ?>
+						<li class="footer-trust-strip__item">
+							<span class="footer-trust-strip__icon"><?php echo almasland_footer_trust_icon( $item['icon'] ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></span>
+							<span><?php echo esc_html( $item['text'] ); ?></span>
+						</li>
+					<?php endforeach; ?>
+				</ul>
+			</div>
+		<?php endif; ?>
+
+		<?php if ( $has_badges ) : ?>
+			<div class="container footer-trust-badges" aria-label="<?php esc_attr_e( 'نمادهای اعتماد', 'almas-land' ); ?>">
+				<a
+					class="footer-trust-badges__link footer-trust-badges__link--enamad"
+					href="<?php echo esc_url( almasland_get_footer_enamad_url() ); ?>"
+					target="_blank"
+					rel="noopener noreferrer"
+					referrerpolicy="origin"
+					title="<?php esc_attr_e( 'نماد اعتماد الکترونیکی', 'almas-land' ); ?>"
+				>
+					<img
+						src="<?php echo esc_url( almasland_get_footer_enamad_image_url() ); ?>"
+						alt="<?php esc_attr_e( 'نماد اعتماد الکترونیکی (e-Namad)', 'almas-land' ); ?>"
+						width="180"
+						height="86"
+						loading="lazy"
+						decoding="async"
+						referrerpolicy="origin"
+					>
+				</a>
+
+				<?php foreach ( $badge_ids as $badge_id ) : ?>
+					<?php if ( $badge_id <= 0 ) : ?>
+						<?php continue; ?>
+					<?php endif; ?>
+					<span class="footer-trust-badges__item">
+						<?php echo wp_get_attachment_image( $badge_id, 'medium', false, array( 'class' => 'footer-trust-badges__image' ) ); ?>
+					</span>
+				<?php endforeach; ?>
+			</div>
+		<?php endif; ?>
+	</div>
+	<?php
+}
+
+/**
  * Query args that should persist in shop pagination links.
  *
  * @return array<string, mixed>

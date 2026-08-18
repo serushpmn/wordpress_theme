@@ -96,6 +96,8 @@ function almasland_theme_panel_defaults() {
 		'footer'        => array(
 			'about'          => 'فروشگاه تخصصی تجهیزات دیجیتال کارکرده با ضمانت، تمرکز بر کیفیت و قیمت منصفانه.',
 			'copyright'      => 'تمامی حقوق این وب‌سایت محفوظ است © ۱۴۰۳ الماس لند',
+			'enamad_url'     => 'https://trustseal.enamad.ir/?id=576236&Code=Rm9yFPbIrrgOK8hJAHxwSrjcCcc4crzd',
+			'enamad_image'   => 0,
 			'trust_badge_1'  => 0,
 			'trust_badge_2'  => 0,
 			'samandehi'      => 0,

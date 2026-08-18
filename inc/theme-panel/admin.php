@@ -578,6 +578,8 @@ function almasland_panel_render_footer() {
 	almasland_panel_field_text( 'almasland_panel[footer][address]', __( 'آدرس', 'almas-land' ), $f['address'] );
 	almasland_panel_card_close();
 	almasland_panel_card_open( __( 'نمادهای اعتماد', 'almas-land' ) );
+	almasland_panel_field_text( 'almasland_panel[footer][enamad_url]', __( 'لینک اینماد', 'almas-land' ), $f['enamad_url'] ?? '', 'url' );
+	almasland_panel_field_image( 'almasland_panel[footer][enamad_image]', __( 'تصویر اینماد', 'almas-land' ), $f['enamad_image'] ?? 0 );
 	almasland_panel_field_image( 'almasland_panel[footer][trust_badge_1]', __( 'نماد اعتماد ۱', 'almas-land' ), $f['trust_badge_1'] );
 	almasland_panel_field_image( 'almasland_panel[footer][trust_badge_2]', __( 'نماد اعتماد ۲', 'almas-land' ), $f['trust_badge_2'] );
 	almasland_panel_field_image( 'almasland_panel[footer][samandehi]', __( 'نماد ساماندهی', 'almas-land' ), $f['samandehi'] );

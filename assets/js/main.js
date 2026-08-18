@@ -26,8 +26,7 @@ function applyTheme(theme) {
   document.documentElement.dataset.theme = theme;
 }
 
-const preferredDark = window.matchMedia?.("(prefers-color-scheme: dark)").matches;
-applyTheme(getStoredTheme() || (preferredDark ? "dark" : "light"));
+applyTheme(getStoredTheme() || "light");
 
 if (headerActions) {
   const themeToggle = document.createElement("button");

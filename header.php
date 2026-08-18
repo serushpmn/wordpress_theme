@@ -6,10 +6,20 @@
  */
 
 ?><!DOCTYPE html>
-<html <?php language_attributes(); ?>>
+<html <?php language_attributes(); ?> data-theme="light">
 <head>
 	<meta charset="<?php echo esc_attr( get_bloginfo( 'charset' ) ); ?>">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<script>
+		(function () {
+			try {
+				var theme = localStorage.getItem('almas-theme');
+				document.documentElement.dataset.theme = theme === 'dark' ? 'dark' : 'light';
+			} catch (error) {
+				document.documentElement.dataset.theme = 'light';
+			}
+		})();
+	</script>
 	<?php wp_head(); ?>
 </head>
 <body <?php body_class(); ?>>

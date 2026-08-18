@@ -162,6 +162,8 @@ if ( ! $logo_id ) {
 		</section>
 	</div>
 
+	<?php almasland_render_footer_trust_section(); ?>
+
 	<div class="footer-bottom">
 		<div class="container footer-bottom__inner">
 			<span><?php echo esc_html( $copyright ); ?></span>

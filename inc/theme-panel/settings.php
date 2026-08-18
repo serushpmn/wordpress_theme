@@ -333,6 +333,8 @@ function almasland_sanitize_panel_settings( $input ) {
 		$f = $input['footer'];
 		$clean['footer']['about']         = wp_kses_post( $f['about'] ?? '' );
 		$clean['footer']['copyright']     = sanitize_text_field( $f['copyright'] ?? '' );
+		$clean['footer']['enamad_url']    = esc_url_raw( $f['enamad_url'] ?? '' );
+		$clean['footer']['enamad_image']  = absint( $f['enamad_image'] ?? 0 );
 		$clean['footer']['trust_badge_1'] = absint( $f['trust_badge_1'] ?? 0 );
 		$clean['footer']['trust_badge_2'] = absint( $f['trust_badge_2'] ?? 0 );
 		$clean['footer']['samandehi']     = absint( $f['samandehi'] ?? 0 );
