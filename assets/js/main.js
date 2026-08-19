@@ -154,12 +154,16 @@ function initHeaderCategoriesMenu() {
 
   if (!wrap || !toggle || !panel) return;
 
+  const isMobileNav = () => window.matchMedia("(max-width: 960px)").matches;
+
   const close = () => {
+    wrap.classList.remove("is-open");
     toggle.setAttribute("aria-expanded", "false");
     panel.setAttribute("hidden", "");
   };
 
   const open = () => {
+    wrap.classList.add("is-open");
     toggle.setAttribute("aria-expanded", "true");
     panel.removeAttribute("hidden");
   };
@@ -170,6 +174,18 @@ function initHeaderCategoriesMenu() {
       close();
     } else {
       open();
+    }
+  });
+
+  wrap.addEventListener("mouseenter", () => {
+    if (!isMobileNav()) {
+      open();
+    }
+  });
+
+  wrap.addEventListener("mouseleave", () => {
+    if (!isMobileNav()) {
+      close();
     }
   });
 
@@ -189,18 +205,37 @@ function initHeaderCategoriesMenu() {
 initHeaderCategoriesMenu();
 
 document.querySelectorAll(".main-nav .menu-item-has-children > a").forEach((link) => {
+  const navItem = link.parentElement;
+  if (!navItem?.classList.contains("menu-item-has-children")) {
+    return;
+  }
+
+  const setExpanded = (isOpen) => {
+    link.setAttribute("aria-expanded", String(isOpen));
+    navItem.classList.toggle("is-open", isOpen);
+  };
+
+  navItem.addEventListener("mouseenter", () => {
+    if (window.matchMedia("(max-width: 960px)").matches) return;
+    setExpanded(true);
+  });
+
+  navItem.addEventListener("mouseleave", () => {
+    if (window.matchMedia("(max-width: 960px)").matches) return;
+    setExpanded(false);
+  });
+
   link.addEventListener("click", (event) => {
     if (!window.matchMedia("(max-width: 960px)").matches) return;
     event.preventDefault();
-    const navItem = link.closest(".menu-item-has-children");
-    if (!navItem) return;
     const willOpen = !navItem.classList.contains("is-open");
-    document.querySelectorAll(".main-nav .menu-item-has-children").forEach((item) => {
-      item.classList.remove("is-open");
+    navItem.parentElement?.querySelectorAll(":scope > .menu-item-has-children").forEach((item) => {
+      if (item !== navItem) {
+        item.classList.remove("is-open");
+        item.querySelector(":scope > a")?.setAttribute("aria-expanded", "false");
+      }
     });
-    if (willOpen) {
-      navItem.classList.add("is-open");
-    }
+    setExpanded(willOpen);
   });
 });
 

@@ -66,10 +66,19 @@ add_filter( 'nav_menu_css_class', 'almasland_nav_menu_css_class', 10, 4 );
  * @return string[]
  */
 function almasland_nav_menu_link_attributes( $atts, $item, $args, $depth ) {
-	if ( isset( $args->theme_location ) && 'primary' === $args->theme_location && 0 === $depth ) {
-		$classes   = isset( $atts['class'] ) ? explode( ' ', $atts['class'] ) : array();
-		$classes[] = 'nav-link';
+	if ( ! isset( $args->theme_location ) || 'primary' !== $args->theme_location ) {
+		return $atts;
+	}
+
+	if ( 0 === $depth ) {
+		$classes       = isset( $atts['class'] ) ? explode( ' ', $atts['class'] ) : array();
+		$classes[]     = 'nav-link';
 		$atts['class'] = implode( ' ', array_filter( $classes ) );
+	}
+
+	if ( in_array( 'menu-item-has-children', (array) $item->classes, true ) ) {
+		$atts['aria-haspopup'] = 'true';
+		$atts['aria-expanded'] = 'false';
 	}
 
 	return $atts;
