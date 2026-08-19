@@ -39,9 +39,6 @@ if ( $grade && ! empty( $grade['bg'] ) ) {
 }
 ?>
 <li <?php wc_product_class( $card_classes, $product ); ?>>
-	<button class="icon-button" type="button" aria-label="<?php esc_attr_e( 'افزودن به علاقه‌مندی‌ها', 'almas-land' ); ?>">
-		<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20.4 10.8 19C6.4 15.1 3.5 12.5 3.5 9.2A4.4 4.4 0 0 1 8 4.8c1.5 0 2.9.7 4 1.8a5.4 5.4 0 0 1 4-1.8 4.4 4.4 0 0 1 4.5 4.4c0 3.3-2.9 5.9-7.3 9.8L12 20.4Z"/></svg>
-	</button>
 	<a class="product-card__media" href="<?php echo esc_url( $product_link ); ?>">
 		<?php echo wp_kses_post( $product->get_image( 'almasland-card' ) ); ?>
 		<?php
@@ -54,11 +51,19 @@ if ( $grade && ! empty( $grade['bg'] ) ) {
 		<div class="product-card__info">
 			<a class="product-card__title" href="<?php echo esc_url( $product_link ); ?>"><?php echo esc_html( $product_name ); ?></a>
 
-			<?php
-			if ( function_exists( 'almasland_render_product_card_tags' ) ) {
-				almasland_render_product_card_tags( $product, $grade, $grade_style );
-			}
-			?>
+			<div class="product-card__meta">
+				<?php
+				if ( function_exists( 'almasland_render_product_card_tags' ) ) {
+					almasland_render_product_card_tags( $product, $grade, $grade_style );
+				}
+				?>
+				<?php if ( $rating > 0 ) : ?>
+					<span class="product-card__rating" aria-label="<?php echo esc_attr( sprintf( __( 'امتیاز %s از ۵', 'almas-land' ), almasland_persian_digits( number_format_i18n( $rating, 1 ) ) ) ); ?>">
+						<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3.6 2.7 5.5 6 .9-4.4 4.2 1 6-5.3-2.8-5.3 2.8 1-6L3.3 10l6-.9L12 3.6Z" fill="currentColor"/></svg>
+						<?php echo esc_html( almasland_persian_digits( number_format_i18n( $rating, 1 ) ) ); ?>
+					</span>
+				<?php endif; ?>
+			</div>
 
 			<?php if ( $summary ) : ?>
 				<p class="product-card__specs"><?php echo esc_html( $summary ); ?></p>
@@ -68,13 +73,6 @@ if ( $grade && ! empty( $grade['bg'] ) ) {
 				<span class="product-card__stock stock <?php echo esc_attr( $stock_class ); ?>"><?php esc_html_e( 'ناموجود', 'almas-land' ); ?></span>
 			<?php endif; ?>
 		</div>
-
-		<?php if ( $rating > 0 ) : ?>
-			<span class="product-card__rating" aria-label="<?php echo esc_attr( sprintf( __( 'امتیاز %s از ۵', 'almas-land' ), almasland_persian_digits( number_format_i18n( $rating, 1 ) ) ) ); ?>">
-				<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3.6 2.7 5.5 6 .9-4.4 4.2 1 6-5.3-2.8-5.3 2.8 1-6L3.3 10l6-.9L12 3.6Z" fill="currentColor"/></svg>
-				<?php echo esc_html( almasland_persian_digits( number_format_i18n( $rating, 1 ) ) ); ?>
-			</span>
-		<?php endif; ?>
 
 		<?php
 		if ( function_exists( 'almasland_render_product_card_pricing' ) ) {

@@ -54,10 +54,6 @@ $view_all_url = add_query_arg( 'on_sale', '1', wc_get_page_permalink( 'shop' ) )
 				}
 				?>
 				<article class="front-page-offer-card swiper-slide<?php echo $is_used ? ' front-page-offer-card--used' : ''; ?>">
-					<button class="front-page-offer-card__wishlist" type="button" aria-label="<?php esc_attr_e( 'افزودن به علاقه‌مندی‌ها', 'almas-land' ); ?>">
-						<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20.4 10.8 19C6.4 15.1 3.5 12.5 3.5 9.2A4.4 4.4 0 0 1 8 4.8c1.5 0 2.9.7 4 1.8a5.4 5.4 0 0 1 4-1.8 4.4 4.4 0 0 1 4.5 4.4c0 3.3-2.9 5.9-7.3 9.8L12 20.4Z" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>
-					</button>
-
 					<a class="front-page-offer-card__media" href="<?php echo esc_url( $product_link ); ?>">
 						<?php echo wp_kses_post( $product->get_image( 'almasland-card', array( 'loading' => 'lazy', 'decoding' => 'async' ) ) ); ?>
 						<?php almasland_render_product_used_badge( $product ); ?>

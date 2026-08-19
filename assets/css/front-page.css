@@ -771,28 +771,21 @@
   border: 1px solid rgba(var(--color-primary-rgb), 0.08);
   border-radius: clamp(14px, 1.6vw, 18px);
   background: var(--color-white);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  transition: transform 0.22s ease, box-shadow 0.22s ease, background-color 0.22s ease, border-color 0.22s ease;
 }
 
-.front-page-offer-card__wishlist {
-  position: absolute;
-  top: 14px;
-  inset-inline-end: 14px;
-  z-index: 2;
-  display: grid;
-  place-items: center;
-  width: 34px;
-  height: 34px;
-  padding: 0;
-  border: 0;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.92);
-  color: var(--offers-accent);
-  cursor: pointer;
+.front-page-offer-card:hover {
+  transform: translateY(-4px);
+  border-color: color-mix(in srgb, var(--color-text) 8%, transparent);
+  background: color-mix(in srgb, var(--color-white) 92%, #fff);
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.1);
 }
 
-.front-page-offer-card__wishlist svg {
-  width: 18px;
-  height: 18px;
+.front-page-offer-card:active {
+  transform: translateY(-1px);
+  background: color-mix(in srgb, var(--color-white) 94%, var(--color-primary) 6%);
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.08);
 }
 
 .front-page-offer-card__discount {
@@ -1040,9 +1033,13 @@
   color: var(--color-text-strong, #edf4ff);
 }
 
-[data-theme="dark"] .front-page-offers__nav,
-[data-theme="dark"] .front-page-offer-card__wishlist {
+[data-theme="dark"] .front-page-offers__nav {
   background: var(--color-surface-elevated, #242b3d);
+}
+
+[data-theme="dark"] .front-page-offer-card:hover {
+  background: color-mix(in srgb, var(--color-surface) 88%, #fff);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.28);
 }
 
 [data-theme="dark"] .front-page-offer-card__specs,

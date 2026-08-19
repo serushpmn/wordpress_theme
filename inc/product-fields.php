@@ -129,6 +129,30 @@ function almasland_sanitize_product_color( $value ) {
 }
 
 /**
+ * Pick a readable text color for a hex background.
+ *
+ * @param string $hex Hex color like #C2C2C4.
+ * @return string
+ */
+function almasland_get_contrast_text_color( $hex ) {
+	$hex = ltrim( (string) $hex, '#' );
+	if ( 6 !== strlen( $hex ) ) {
+		return '#FFFFFF';
+	}
+
+	$channel = static function ( $part ) {
+		$value = hexdec( $part ) / 255;
+		return $value <= 0.03928 ? $value / 12.92 : pow( ( $value + 0.055 ) / 1.055, 2.4 );
+	};
+
+	$luminance = 0.2126 * $channel( substr( $hex, 0, 2 ) )
+		+ 0.7152 * $channel( substr( $hex, 2, 2 ) )
+		+ 0.0722 * $channel( substr( $hex, 4, 2 ) );
+
+	return $luminance > 0.54 ? '#1A1F2C' : '#FFFFFF';
+}
+
+/**
  * Get product color from meta (supports variations via parent).
  *
  * @param WC_Product|null $product Product.
@@ -173,14 +197,20 @@ function almasland_render_product_color_swatch( $product, $args = array() ) {
 		)
 	);
 
-	$size_class = sanitize_html_class( 'product-color-swatch--' . $args['size'] );
-	$classes    = trim( $args['class'] . ' ' . $size_class );
-	$color_name = __( 'رنگ محصول', 'almas-land' );
+	$size_class   = sanitize_html_class( 'product-color-swatch--' . $args['size'] );
+	$classes      = trim( $args['class'] . ' ' . $size_class );
+	$color_name   = __( 'رنگ محصول', 'almas-land' );
+	$text_color   = almasland_get_contrast_text_color( $color );
+	$inline_style = sprintf(
+		'background-color:%1$s;--swatch-color:%1$s;--swatch-tooltip-text:%2$s;',
+		esc_attr( $color ),
+		esc_attr( $text_color )
+	);
 
 	$swatch = sprintf(
-		'<span class="%1$s" style="background-color:%2$s;" data-color-tooltip="%3$s" tabindex="0" role="button" aria-label="%3$s" aria-expanded="false"></span>',
+		'<span class="%1$s" style="%2$s" data-color-tooltip="%3$s" tabindex="0" role="button" aria-label="%3$s" aria-expanded="false"></span>',
 		esc_attr( $classes ),
-		esc_attr( $color ),
+		$inline_style,
 		esc_attr( $color_name )
 	);
 
