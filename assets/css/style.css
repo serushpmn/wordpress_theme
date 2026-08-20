@@ -635,12 +635,21 @@ main {
   line-height: 1;
   white-space: nowrap;
   text-decoration: none;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .logo--image {
   flex-direction: column;
   align-items: flex-start;
   gap: 4px;
+}
+
+.logo__media {
+  display: flex;
+  align-items: center;
+  max-width: min(220px, 100%);
+  max-height: 48px;
 }
 
 .logo__mark {
@@ -676,10 +685,42 @@ main {
 }
 
 .custom-logo-link .custom-logo,
-.logo .custom-logo {
+.logo .custom-logo,
+.logo__media .custom-logo {
   display: block;
-  max-height: 44px;
   width: auto;
+  max-width: 100%;
+  height: auto;
+  max-height: 48px;
+  object-fit: contain;
+  object-position: right center;
+}
+
+.logo__media .custom-logo--mobile,
+.logo__media .custom-logo--dark {
+  display: none;
+}
+
+[data-theme="dark"] .logo__media .custom-logo--light {
+  display: none;
+}
+
+[data-theme="dark"] .logo__media .custom-logo--dark {
+  display: block;
+}
+
+@media (max-width: 960px) {
+  .logo__media .custom-logo--desktop {
+    display: none !important;
+  }
+
+  .logo__media .custom-logo--mobile {
+    display: block !important;
+  }
+
+  [data-theme="dark"] .logo__media .custom-logo--mobile {
+    display: block !important;
+  }
 }
 
 .search-form {
@@ -1494,13 +1535,14 @@ main {
 .product-card--storefront .product-card__title {
   min-height: 0;
   color: var(--color-text-strong);
-  font-size: clamp(0.9rem, 1.05vw, 1rem);
+  font-size: clamp(0.75rem, 1.05vw, 1rem);
   font-weight: 700;
   line-height: 1.45;
   text-align: center;
 }
 
 .product-card__specs {
+  direction: ltr;
   display: -webkit-box;
   margin: 0;
   overflow: hidden;
@@ -1532,6 +1574,7 @@ main {
   display: inline-flex;
   flex-wrap: wrap;
   align-items: center;
+  align-self: center;
   gap: 8px;
   width: fit-content;
   overflow: visible;
@@ -1539,6 +1582,13 @@ main {
 
 .product-card__tags .product-card__grade {
   margin: 0;
+}
+
+.product-color-swatches {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
 }
 
 .product-color-swatch {
@@ -5269,36 +5319,66 @@ body.is-modal-open {
   }
 
   .header-main {
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
     align-items: center;
-    gap: 10px 12px;
-    min-height: 64px;
-    padding-block: 10px;
+    column-gap: 10px;
+    row-gap: 10px;
+    min-height: 58px;
+    padding-block: 8px;
   }
 
   .menu-toggle {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    order: 1;
+    grid-column: 1;
+    grid-row: 1;
+    flex-shrink: 0;
   }
 
   .logo {
-    order: 2;
-    flex: 1 1 auto;
+    grid-column: 2;
+    grid-row: 1;
+    justify-self: start;
+    align-self: center;
     min-width: 0;
+    max-width: 100%;
+  }
+
+  .logo--image {
+    flex-direction: row;
+    align-items: center;
+  }
+
+  .logo__media {
+    max-width: min(148px, 42vw);
+    max-height: 36px;
+  }
+
+  .logo__media .custom-logo,
+  .custom-logo-link .custom-logo,
+  .logo .custom-logo {
+    max-height: 36px;
+    max-width: 100%;
   }
 
   .header-actions {
-    order: 3;
+    grid-column: 3;
+    grid-row: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 4px;
     flex: 0 0 auto;
+    min-width: 0;
   }
 
   .search-form {
-    order: 4;
-    flex: 1 1 100%;
+    grid-column: 1 / -1;
+    grid-row: 2;
     max-width: none;
+    min-height: 44px;
   }
 
   .logo__tagline {
@@ -5311,6 +5391,15 @@ body.is-modal-open {
 
   .header-action > span:not(.header-action__icon) {
     display: none;
+  }
+
+  .theme-toggle,
+  .header-action {
+    width: 40px;
+    min-width: 40px;
+    height: 40px;
+    padding: 0;
+    justify-content: center;
   }
 
   .header-nav {
@@ -8210,11 +8299,16 @@ textarea:focus {
 .custom-logo-link {
   display: inline-flex;
   align-items: center;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .custom-logo {
-  max-width: 220px;
-  max-height: 58px;
+  display: block;
+  width: auto;
+  max-width: 100%;
+  height: auto;
+  max-height: 48px;
   object-fit: contain;
 }
 

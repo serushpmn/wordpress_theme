@@ -1,13 +1,33 @@
+.almasland-product-colors {
+  display: grid;
+  gap: 10px;
+  max-width: 640px;
+}
+
+.almasland-product-colors__rows {
+  display: grid;
+  gap: 8px;
+}
+
+.almasland-product-color-row {
+  margin: 0;
+}
+
 .almasland-product-color-field {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .almasland-product-color-field__hex {
-  width: 120px !important;
+  width: 110px !important;
   direction: ltr;
   text-transform: uppercase;
+}
+
+.almasland-product-color-field__name {
+  width: 180px !important;
 }
 
 .almasland-product-color-field__picker {
@@ -32,4 +52,19 @@
 .almasland-product-color-field__picker::-moz-color-swatch {
   border: 0;
   border-radius: 4px;
+}
+
+.almasland-product-color-field__remove {
+  font-size: 20px;
+  line-height: 1;
+  color: #b32d2e;
+  text-decoration: none;
+}
+
+.almasland-product-colors__add {
+  width: fit-content;
+}
+
+._almas_product_colors_field .description {
+  margin-top: 6px;
 }

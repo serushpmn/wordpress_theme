@@ -32,10 +32,10 @@ function almasland_product_fields() {
 			'description' => esc_html__( 'وضعیت ظاهری برای نمایش رنگی روی کارت محصولات دست‌دوم.', 'almas-land' ),
 			'options'     => almasland_get_product_card_grade_options(),
 		),
-		'_almas_product_color'  => array(
-			'label'       => esc_html__( 'رنگ محصول', 'almas-land' ),
-			'type'        => 'color',
-			'description' => esc_html__( 'رنگ را با کد hex یا انتخابگر رنگ مشخص کنید. روی کارت و صفحه محصول به‌صورت دایره نمایش داده می‌شود.', 'almas-land' ),
+		'_almas_product_colors' => array(
+			'label'       => esc_html__( 'رنگ‌های محصول', 'almas-land' ),
+			'type'        => 'colors',
+			'description' => esc_html__( 'می‌توانید چند رنگ با نام ثبت کنید. روی کارت محصول همه رنگ‌ها نمایش داده می‌شوند.', 'almas-land' ),
 		),
 		'_almas_brand'          => array( 'label' => esc_html__( 'برند محصول', 'almas-land' ), 'type' => 'text' ),
 		'_almas_warranty'       => array( 'label' => esc_html__( 'گارانتی', 'almas-land' ), 'type' => 'text' ),
@@ -153,37 +153,149 @@ function almasland_get_contrast_text_color( $hex ) {
 }
 
 /**
- * Get product color from meta (supports variations via parent).
+ * Sanitize a list of product colors.
+ *
+ * @param mixed $value Raw colors.
+ * @return array<int, array{hex: string, name: string}>
+ */
+function almasland_sanitize_product_colors( $value ) {
+	if ( ! is_array( $value ) ) {
+		return array();
+	}
+
+	$clean = array();
+	foreach ( $value as $item ) {
+		if ( ! is_array( $item ) ) {
+			continue;
+		}
+
+		$hex = almasland_sanitize_product_color( $item['hex'] ?? '' );
+		if ( '' === $hex ) {
+			continue;
+		}
+
+		$name = sanitize_text_field( (string) ( $item['name'] ?? '' ) );
+		if ( '' === $name ) {
+			$name = __( 'رنگ محصول', 'almas-land' );
+		}
+
+		$clean[] = array(
+			'hex'  => $hex,
+			'name' => $name,
+		);
+	}
+
+	return array_values( $clean );
+}
+
+/**
+ * Resolve product meta source (parent for variations).
+ *
+ * @param WC_Product $product Product.
+ * @return WC_Product
+ */
+function almasland_get_product_meta_source( $product ) {
+	if ( $product->is_type( 'variation' ) ) {
+		$parent = wc_get_product( $product->get_parent_id() );
+		if ( $parent ) {
+			return $parent;
+		}
+	}
+
+	return $product;
+}
+
+/**
+ * Get product colors from meta (supports legacy single color + variations via parent).
+ *
+ * @param WC_Product|null $product Product.
+ * @return array<int, array{hex: string, name: string}>
+ */
+function almasland_get_product_colors( $product ) {
+	if ( ! $product instanceof WC_Product ) {
+		return array();
+	}
+
+	$source  = almasland_get_product_meta_source( $product );
+	$colors  = almasland_sanitize_product_colors( $source->get_meta( '_almas_product_colors' ) );
+	if ( ! empty( $colors ) ) {
+		return $colors;
+	}
+
+	$legacy = almasland_sanitize_product_color( (string) $source->get_meta( '_almas_product_color' ) );
+	if ( '' === $legacy ) {
+		return array();
+	}
+
+	return array(
+		array(
+			'hex'  => $legacy,
+			'name' => __( 'رنگ محصول', 'almas-land' ),
+		),
+	);
+}
+
+/**
+ * Get first product color hex (legacy helper).
  *
  * @param WC_Product|null $product Product.
  * @return string Hex color or empty string.
  */
 function almasland_get_product_color( $product ) {
-	if ( ! $product instanceof WC_Product ) {
-		return '';
-	}
-
-	$source = $product;
-	if ( $product->is_type( 'variation' ) ) {
-		$parent = wc_get_product( $product->get_parent_id() );
-		if ( $parent ) {
-			$source = $parent;
-		}
-	}
-
-	return almasland_sanitize_product_color( (string) $source->get_meta( '_almas_product_color' ) );
+	$colors = almasland_get_product_colors( $product );
+	return ! empty( $colors[0]['hex'] ) ? $colors[0]['hex'] : '';
 }
 
 /**
- * Render product color swatch markup.
+ * Render one color swatch.
+ *
+ * @param string $hex   Hex color.
+ * @param string $name  Color name.
+ * @param array  $args  Display args.
+ * @return string
+ */
+function almasland_render_single_color_swatch( $hex, $name, $args = array() ) {
+	$hex = almasland_sanitize_product_color( $hex );
+	if ( '' === $hex ) {
+		return '';
+	}
+
+	$args = wp_parse_args(
+		$args,
+		array(
+			'class' => 'product-color-swatch',
+			'size'  => 'md',
+		)
+	);
+
+	$name         = $name ? $name : __( 'رنگ محصول', 'almas-land' );
+	$size_class   = sanitize_html_class( 'product-color-swatch--' . $args['size'] );
+	$classes      = trim( $args['class'] . ' ' . $size_class );
+	$text_color   = almasland_get_contrast_text_color( $hex );
+	$inline_style = sprintf(
+		'background-color:%1$s;--swatch-color:%1$s;--swatch-tooltip-text:%2$s;',
+		esc_attr( $hex ),
+		esc_attr( $text_color )
+	);
+
+	return sprintf(
+		'<span class="%1$s" style="%2$s" data-color-tooltip="%3$s" tabindex="0" role="button" aria-label="%3$s" aria-expanded="false"></span>',
+		esc_attr( $classes ),
+		$inline_style,
+		esc_attr( $name )
+	);
+}
+
+/**
+ * Render product color swatch markup (all colors).
  *
  * @param WC_Product|null $product Product.
  * @param array           $args    Display args.
  * @return string
  */
 function almasland_render_product_color_swatch( $product, $args = array() ) {
-	$color = almasland_get_product_color( $product );
-	if ( '' === $color ) {
+	$colors = almasland_get_product_colors( $product );
+	if ( empty( $colors ) ) {
 		return '';
 	}
 
@@ -197,58 +309,37 @@ function almasland_render_product_color_swatch( $product, $args = array() ) {
 		)
 	);
 
-	$size_class   = sanitize_html_class( 'product-color-swatch--' . $args['size'] );
-	$classes      = trim( $args['class'] . ' ' . $size_class );
-	$color_name   = __( 'رنگ محصول', 'almas-land' );
-	$text_color   = almasland_get_contrast_text_color( $color );
-	$inline_style = sprintf(
-		'background-color:%1$s;--swatch-color:%1$s;--swatch-tooltip-text:%2$s;',
-		esc_attr( $color ),
-		esc_attr( $text_color )
-	);
+	$swatches = '';
+	foreach ( $colors as $item ) {
+		$swatches .= almasland_render_single_color_swatch( $item['hex'], $item['name'], $args );
+	}
 
-	$swatch = sprintf(
-		'<span class="%1$s" style="%2$s" data-color-tooltip="%3$s" tabindex="0" role="button" aria-label="%3$s" aria-expanded="false"></span>',
-		esc_attr( $classes ),
-		$inline_style,
-		esc_attr( $color_name )
-	);
+	$group = '<span class="product-color-swatches">' . $swatches . '</span>';
 
 	if ( ! $args['show_label'] ) {
-		return $swatch;
+		return $group;
 	}
 
 	return sprintf(
 		'<span class="product-color-display"><span class="product-color-display__label">%1$s</span>%2$s</span>',
 		esc_html( $args['label'] ),
-		$swatch
+		$group
 	);
 }
 
 /**
- * Render admin product color field.
+ * Render one admin color row.
  *
- * @param string $value Saved color.
+ * @param int                  $index Row index.
+ * @param array{hex?:string,name?:string} $item  Row data.
  */
-function almasland_render_product_color_field( $value = '' ) {
-	$value = almasland_sanitize_product_color( $value );
-	$picker_value = $value ? $value : '#000000';
+function almasland_render_product_color_row( $index, $item = array() ) {
+	$hex          = almasland_sanitize_product_color( $item['hex'] ?? '' );
+	$name         = sanitize_text_field( (string) ( $item['name'] ?? '' ) );
+	$picker_value = $hex ? $hex : '#000000';
 	?>
-	<p class="form-field _almas_product_color_field">
-		<label for="_almas_product_color"><?php esc_html_e( 'رنگ محصول', 'almas-land' ); ?></label>
+	<div class="almasland-product-color-row" data-product-color-row>
 		<span class="almasland-product-color-field">
-			<input
-				type="text"
-				class="shorttext almasland-product-color-field__hex"
-				name="_almas_product_color"
-				id="_almas_product_color"
-				value="<?php echo esc_attr( $value ); ?>"
-				placeholder="#000000"
-				inputmode="text"
-				autocomplete="off"
-				spellcheck="false"
-				data-product-color-hex
-			>
 			<input
 				type="color"
 				class="almasland-product-color-field__picker"
@@ -256,9 +347,64 @@ function almasland_render_product_color_field( $value = '' ) {
 				aria-label="<?php esc_attr_e( 'انتخاب رنگ', 'almas-land' ); ?>"
 				data-product-color-picker
 			>
+			<input
+				type="text"
+				class="shorttext almasland-product-color-field__hex"
+				name="_almas_product_colors[<?php echo esc_attr( (string) $index ); ?>][hex]"
+				value="<?php echo esc_attr( $hex ); ?>"
+				placeholder="#000000"
+				inputmode="text"
+				autocomplete="off"
+				spellcheck="false"
+				data-product-color-hex
+			>
+			<input
+				type="text"
+				class="shorttext almasland-product-color-field__name"
+				name="_almas_product_colors[<?php echo esc_attr( (string) $index ); ?>][name]"
+				value="<?php echo esc_attr( $name ); ?>"
+				placeholder="<?php esc_attr_e( 'نام رنگ (مثلاً نقره‌ای)', 'almas-land' ); ?>"
+				data-product-color-name
+			>
+			<button type="button" class="button-link-delete almasland-product-color-field__remove" data-product-color-remove aria-label="<?php esc_attr_e( 'حذف رنگ', 'almas-land' ); ?>">&times;</button>
 		</span>
-		<?php echo wc_help_tip( esc_html__( 'رنگ را با کد hex یا انتخابگر رنگ مشخص کنید. روی کارت و صفحه محصول به‌صورت دایره نمایش داده می‌شود.', 'almas-land' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
-	</p>
+	</div>
+	<?php
+}
+
+/**
+ * Render admin product colors repeater.
+ *
+ * @param array<int, array{hex:string,name:string}> $colors Saved colors.
+ */
+function almasland_render_product_color_field( $colors = array() ) {
+	$colors = almasland_sanitize_product_colors( $colors );
+	if ( empty( $colors ) ) {
+		$colors = array(
+			array(
+				'hex'  => '',
+				'name' => '',
+			),
+		);
+	}
+	?>
+	<div class="form-field _almas_product_colors_field">
+		<label><?php esc_html_e( 'رنگ‌های محصول', 'almas-land' ); ?></label>
+		<div class="almasland-product-colors" data-product-colors>
+			<div class="almasland-product-colors__rows" data-product-colors-rows>
+				<?php foreach ( $colors as $index => $item ) : ?>
+					<?php almasland_render_product_color_row( $index, $item ); ?>
+				<?php endforeach; ?>
+			</div>
+			<button type="button" class="button almasland-product-colors__add" data-product-colors-add>
+				<?php esc_html_e( 'افزودن رنگ', 'almas-land' ); ?>
+			</button>
+			<template data-product-color-template>
+				<?php almasland_render_product_color_row( '__INDEX__', array( 'hex' => '', 'name' => '' ) ); ?>
+			</template>
+		</div>
+		<p class="description"><?php esc_html_e( 'برای هر رنگ یک کد/انتخابگر و نام وارد کنید. همه رنگ‌ها روی کارت محصول نمایش داده می‌شوند.', 'almas-land' ); ?></p>
+	</div>
 	<?php
 }
 
@@ -308,7 +454,7 @@ function almasland_add_product_fields() {
 	wp_nonce_field( 'almasland_save_product_fields', 'almasland_product_fields_nonce' );
 
 	foreach ( almasland_product_fields() as $key => $field ) {
-		if ( 'color' === $field['type'] ) {
+		if ( 'colors' === $field['type'] || 'color' === $field['type'] ) {
 			continue;
 		}
 
@@ -330,8 +476,8 @@ function almasland_add_product_fields() {
 		}
 	}
 
-	$saved_color = $product_object instanceof WC_Product ? almasland_get_product_color( $product_object ) : '';
-	almasland_render_product_color_field( $saved_color );
+	$saved_colors = $product_object instanceof WC_Product ? almasland_get_product_colors( $product_object ) : array();
+	almasland_render_product_color_field( $saved_colors );
 	echo '</div>';
 }
 add_action( 'woocommerce_product_options_general_product_data', 'almasland_add_product_fields' );
@@ -355,6 +501,10 @@ function almasland_save_product_fields( $product ) {
 	}
 
 	foreach ( almasland_product_fields() as $key => $field ) {
+		if ( 'colors' === $field['type'] || 'color' === $field['type'] ) {
+			continue;
+		}
+
 		if ( ! isset( $_POST[ $key ] ) ) {
 			continue;
 		}
@@ -370,12 +520,20 @@ function almasland_save_product_fields( $product ) {
 			if ( ! array_key_exists( $value, $options ) ) {
 				$value = '';
 			}
-		} elseif ( 'color' === $field['type'] ) {
-			$value = almasland_sanitize_product_color( $value );
 		} else {
 			$value = sanitize_text_field( $value );
 		}
 		$product->update_meta_data( $key, $value );
+	}
+
+	$raw_colors = isset( $_POST['_almas_product_colors'] ) ? wp_unslash( $_POST['_almas_product_colors'] ) : array(); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
+	$colors     = almasland_sanitize_product_colors( is_array( $raw_colors ) ? $raw_colors : array() );
+	$product->update_meta_data( '_almas_product_colors', $colors );
+
+	if ( ! empty( $colors[0]['hex'] ) ) {
+		$product->update_meta_data( '_almas_product_color', $colors[0]['hex'] );
+	} else {
+		$product->delete_meta_data( '_almas_product_color' );
 	}
 
 	delete_transient( 'almasland_shop_brand_options' );

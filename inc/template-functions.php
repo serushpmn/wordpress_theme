@@ -163,33 +163,78 @@ function almasland_is_notification_bar_visible() {
 }
 
 /**
- * Logo attachment ID for current context.
+ * Logo attachment IDs for desktop / mobile / dark contexts.
+ *
+ * @return array{main:int,dark:int,mobile:int}
+ */
+function almasland_get_logo_ids() {
+	return array(
+		'main'   => absint( almasland_get_panel( 'identity', 'logo_main', 0 ) ),
+		'dark'   => absint( almasland_get_panel( 'identity', 'logo_dark', 0 ) ),
+		'mobile' => absint( almasland_get_panel( 'identity', 'logo_mobile', 0 ) ),
+	);
+}
+
+/**
+ * Logo attachment ID for current context (legacy helper).
  *
  * @return int
  */
 function almasland_get_logo_id() {
-	$logo_main   = absint( almasland_get_panel( 'identity', 'logo_main', 0 ) );
-	$logo_dark   = absint( almasland_get_panel( 'identity', 'logo_dark', 0 ) );
-	$logo_mobile = absint( almasland_get_panel( 'identity', 'logo_mobile', 0 ) );
+	$ids = almasland_get_logo_ids();
 
-	if ( wp_is_mobile() && $logo_mobile ) {
-		return $logo_mobile;
+	if ( wp_is_mobile() && $ids['mobile'] ) {
+		return $ids['mobile'];
 	}
 
-	return $logo_main ?: $logo_dark;
+	return $ids['main'] ?: $ids['dark'];
+}
+
+/**
+ * Render a logo <img> with responsive-safe attributes.
+ *
+ * @param int    $attachment_id Attachment ID.
+ * @param string $class         Extra classes.
+ * @param string $alt           Alt text.
+ * @return string
+ */
+function almasland_get_logo_image_html( $attachment_id, $class = 'custom-logo', $alt = '' ) {
+	$attachment_id = absint( $attachment_id );
+	if ( ! $attachment_id ) {
+		return '';
+	}
+
+	return wp_get_attachment_image(
+		$attachment_id,
+		'full',
+		false,
+		array(
+			'class'    => $class,
+			'alt'      => $alt ? $alt : get_bloginfo( 'name' ),
+			'loading'  => 'eager',
+			'decoding' => 'async',
+			'sizes'    => '(max-width: 960px) 140px, 220px',
+		)
+	);
 }
 
 /**
  * Site logo with fallback text.
  */
 function almasland_site_logo() {
-	$logo_id = almasland_get_logo_id();
+	$ids     = almasland_get_logo_ids();
 	$tagline = get_bloginfo( 'description' );
 	if ( ! $tagline ) {
 		$tagline = __( 'تجهیزات دیجیتال با ضمانت', 'almas-land' );
 	}
 
-	if ( ! $logo_id && has_custom_logo() ) {
+	$alt          = get_bloginfo( 'name' );
+	$main_id      = $ids['main'] ?: $ids['dark'];
+	$mobile_id    = $ids['mobile'] ?: $main_id;
+	$dark_id      = $ids['dark'] ?: $main_id;
+	$has_panel    = (bool) ( $main_id || $mobile_id || $dark_id );
+
+	if ( ! $has_panel && has_custom_logo() ) {
 		echo '<div class="logo logo--image">';
 		the_custom_logo();
 		echo '<span class="logo__tagline">' . esc_html( $tagline ) . '</span>';
@@ -197,12 +242,24 @@ function almasland_site_logo() {
 		return;
 	}
 
-	if ( $logo_id ) {
-		$alt = get_bloginfo( 'name' );
+	if ( $has_panel ) {
+		$desktop_html = almasland_get_logo_image_html( $main_id, 'custom-logo custom-logo--desktop custom-logo--light', $alt );
+		$dark_html    = almasland_get_logo_image_html( $dark_id, 'custom-logo custom-logo--desktop custom-logo--dark', $alt );
+		$mobile_html  = almasland_get_logo_image_html( $mobile_id, 'custom-logo custom-logo--mobile', $alt );
+
+		if ( ! $desktop_html && $mobile_html ) {
+			$desktop_html = str_replace( 'custom-logo--mobile', 'custom-logo--desktop custom-logo--light', $mobile_html );
+		}
+		if ( ! $dark_html && $desktop_html ) {
+			$dark_html = str_replace( 'custom-logo--light', 'custom-logo--dark', $desktop_html );
+		}
+
 		printf(
-			'<a class="logo logo--image custom-logo-link" href="%1$s" rel="home">%2$s<span class="logo__tagline">%3$s</span></a>',
+			'<a class="logo logo--image custom-logo-link" href="%1$s" rel="home"><span class="logo__media">%2$s%3$s%4$s</span><span class="logo__tagline">%5$s</span></a>',
 			esc_url( home_url( '/' ) ),
-			wp_get_attachment_image( $logo_id, 'medium', false, array( 'class' => 'custom-logo', 'alt' => $alt ) ),
+			$desktop_html, // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+			$dark_html, // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+			$mobile_html, // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 			esc_html( $tagline )
 		);
 		return;
