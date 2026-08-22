@@ -363,6 +363,33 @@ function almasland_cart_attribute_value( $value ) {
 }
 
 /**
+ * Render delivery notice for a cart line item.
+ *
+ * @param WC_Product|null $product Product.
+ * @return void
+ */
+function almasland_render_cart_item_delivery( $product ) {
+	$delivery = function_exists( 'almasland_get_product_delivery_text' )
+		? almasland_get_product_delivery_text( $product )
+		: '';
+
+	if ( '' === $delivery ) {
+		return;
+	}
+	?>
+	<p class="cart-item__delivery">
+		<span class="cart-item__delivery-icon" aria-hidden="true">
+			<svg viewBox="0 0 24 24" fill="none"><path d="M3 7h11v10H3V7Z" stroke="currentColor" stroke-width="1.6"/><path d="M14 10h4l3 3v4h-7v-7Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="7" cy="18" r="1.7" stroke="currentColor" stroke-width="1.5"/><circle cx="17" cy="18" r="1.7" stroke="currentColor" stroke-width="1.5"/></svg>
+		</span>
+		<span class="cart-item__delivery-text">
+			<?php esc_html_e( 'زمان ارسال این کالا:', 'almas-land' ); ?>
+			<strong><?php echo esc_html( $delivery ); ?></strong>
+		</span>
+	</p>
+	<?php
+}
+
+/**
  * Read product attributes for the cart card, with Persian labels.
  *
  * @param array      $cart_item Cart item data.

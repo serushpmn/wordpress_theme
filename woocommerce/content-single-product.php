@@ -33,6 +33,7 @@ $stock_qty   = $product->get_stock_quantity();
 $is_variable = $product->is_type( 'variable' );
 $is_used_product = function_exists( 'almasland_is_used_product' ) ? almasland_is_used_product( $product ) : has_term( 'used', 'product_cat', $product->get_id() );
 $has_used_health_report = $is_used_product && function_exists( 'almasland_product_has_used_health_report' ) && almasland_product_has_used_health_report( $product );
+$show_standard_product_specs = ! $has_used_health_report;
 $stock_label = $is_variable
 	? esc_html__( 'موجودی پس از انتخاب گزینه مشخص می‌شود', 'almas-land' )
 	: (
@@ -85,9 +86,9 @@ $contact_phone    = almasland_get_phone_tel();
 
 
 		</div>
-<section class="product-wrapper-content<?php echo $is_used_product ? ' product-wrapper-content--used' : ''; ?>">
+<section class="product-wrapper-content<?php echo $has_used_health_report ? ' product-wrapper-content--used' : ''; ?>">
 	<section class="product-main-content">
-		<section class="product-summary<?php echo $is_used_product ? ' product-summary--used' : ''; ?>" aria-labelledby="product-title">
+		<section class="product-summary<?php echo $has_used_health_report ? ' product-summary--used' : ''; ?>" aria-labelledby="product-title">
 			<?php if ( $has_used_health_report ) : ?>
 				<div class="product-media-column">
 			<?php endif; ?>
@@ -125,28 +126,26 @@ $contact_phone    = almasland_get_phone_tel();
 				</div>
 			<?php endif; ?>
 
-			<div class="product-info<?php echo $is_used_product ? ' product-info--used' : ''; ?>">
+			<div class="product-info<?php echo $has_used_health_report ? ' product-info--used' : ''; ?>">
 			<?php if ( $brand ) : ?>
 				<p class="product-info__brand"><?php esc_html_e( 'برند:', 'almas-land' ); ?> <strong><?php echo esc_html( $brand ); ?></strong></p>
 			<?php endif; ?>
 
-			<?php if ( $is_used_product ) : ?>
+			<?php if ( $has_used_health_report ) : ?>
 				<?php almasland_render_used_device_health_report( $product ); ?>
-			<?php else : ?>
-				<?php if ( $summary_specs ) : ?>
-					<dl class="product-spec-list" aria-label="<?php esc_attr_e( 'مشخصات کوتاه محصول', 'almas-land' ); ?>">
-						<?php foreach ( $summary_specs as $label => $value ) : ?>
-							<div><dt><?php echo esc_html( $label ); ?></dt><dd><?php echo esc_html( $value ); ?></dd></div>
-						<?php endforeach; ?>
-					</dl>
-				<?php endif; ?>
+			<?php elseif ( $summary_specs ) : ?>
+				<dl class="product-spec-list" aria-label="<?php esc_attr_e( 'مشخصات کوتاه محصول', 'almas-land' ); ?>">
+					<?php foreach ( $summary_specs as $label => $value ) : ?>
+						<div><dt><?php echo esc_html( $label ); ?></dt><dd><?php echo esc_html( $value ); ?></dd></div>
+					<?php endforeach; ?>
+				</dl>
 
 				<?php if ( count( $specs ) > count( $summary_specs ) ) : ?>
 					<a class="product-more-link" href="#spec-title"><?php esc_html_e( 'مشاهده مشخصات بیشتر', 'almas-land' ); ?></a>
 				<?php endif; ?>
 			<?php endif; ?>
 
-				<?php if ( ! $is_used_product && $product->get_short_description() ) : ?>
+				<?php if ( $show_standard_product_specs && $product->get_short_description() ) : ?>
 					<div class="product-excerpt entry-content">
 						<?php echo wp_kses_post( wpautop( $product->get_short_description() ) ); ?>
 					</div>
@@ -214,6 +213,12 @@ $contact_phone    = almasland_get_phone_tel();
 			<span class="buy-card__stock-dot" aria-hidden="true"></span>
 			<?php echo esc_html( $stock_label ); ?>
 		</span>
+
+		<?php
+		if ( function_exists( 'almasland_render_single_product_colors' ) ) {
+			almasland_render_single_product_colors( $product, array( 'context' => 'compact' ) );
+		}
+		?>
 
 		<div class="buy-card__feature">
 			<span class="buy-card__feature-icon" aria-hidden="true">

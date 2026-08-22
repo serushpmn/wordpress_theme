@@ -206,6 +206,28 @@ function almasland_get_product_meta_source( $product ) {
 }
 
 /**
+ * Get product delivery/shipping copy from meta.
+ *
+ * @param WC_Product|null $product Product.
+ * @return string
+ */
+function almasland_get_product_delivery_text( $product ) {
+	if ( ! $product instanceof WC_Product ) {
+		return '';
+	}
+
+	$delivery = trim( wp_strip_all_tags( (string) almasland_get_product_meta_source( $product )->get_meta( '_almas_delivery' ) ) );
+
+	if ( '' === $delivery ) {
+		return '';
+	}
+
+	return function_exists( 'almasland_persian_digits' )
+		? almasland_persian_digits( $delivery )
+		: $delivery;
+}
+
+/**
  * Get product colors from meta (supports legacy single color + variations via parent).
  *
  * @param WC_Product|null $product Product.
@@ -325,6 +347,70 @@ function almasland_render_product_color_swatch( $product, $args = array() ) {
 		esc_html( $args['label'] ),
 		$group
 	);
+}
+
+/**
+ * Render product colors on the single product page.
+ *
+ * @param WC_Product|null $product Product.
+ * @param array           $args    Display args. context: default|compact.
+ * @return void
+ */
+function almasland_render_single_product_colors( $product, $args = array() ) {
+	$colors = almasland_get_product_colors( $product );
+	if ( empty( $colors ) ) {
+		return;
+	}
+
+	$args = wp_parse_args(
+		$args,
+		array(
+			'context' => 'default',
+		)
+	);
+
+	$is_compact = 'compact' === $args['context'];
+	$size       = $is_compact ? 'md' : 'xl';
+	$count      = count( $colors );
+	$swatches   = '';
+
+	foreach ( $colors as $item ) {
+		$swatches .= almasland_render_single_color_swatch( $item['hex'], $item['name'], array( 'size' => $size ) );
+	}
+
+	$wrapper_class = $is_compact
+		? 'single-product-colors single-product-colors--compact'
+		: 'single-product-colors';
+
+	$count_label = function_exists( 'almasland_persian_digits' )
+		? almasland_persian_digits( (string) $count )
+		: (string) $count;
+	?>
+	<div class="<?php echo esc_attr( $wrapper_class ); ?>" aria-label="<?php esc_attr_e( 'رنگ‌های محصول', 'almas-land' ); ?>">
+		<div class="single-product-colors__head">
+			<span class="single-product-colors__icon" aria-hidden="true">
+				<svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.6"/><circle cx="9" cy="10" r="2" fill="currentColor"/><circle cx="15" cy="14" r="2" fill="currentColor"/></svg>
+			</span>
+			<div class="single-product-colors__text">
+				<span class="single-product-colors__label"><?php esc_html_e( 'رنگ محصول', 'almas-land' ); ?></span>
+				<?php if ( ! $is_compact && $count > 1 ) : ?>
+					<span class="single-product-colors__meta">
+						<?php
+						printf(
+							/* translators: %s: color count */
+							esc_html__( '%s گزینه', 'almas-land' ),
+							esc_html( $count_label )
+						);
+						?>
+					</span>
+				<?php endif; ?>
+			</div>
+		</div>
+		<div class="single-product-colors__swatches">
+			<span class="product-color-swatches"><?php echo $swatches; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped in renderer. ?></span>
+		</div>
+	</div>
+	<?php
 }
 
 /**

@@ -91,6 +91,12 @@ $saved_items   = $is_saved_view && function_exists( 'almasland_get_saved_cart_it
 									?>
 								</h2>
 
+								<?php
+								if ( function_exists( 'almasland_render_cart_item_delivery' ) ) {
+									almasland_render_cart_item_delivery( $_product );
+								}
+								?>
+
 								<?php if ( $product_features ) : ?>
 									<ul class="cart-item__features" aria-label="<?php esc_attr_e( 'ویژگی‌های محصول', 'almas-land' ); ?>">
 										<?php foreach ( $product_features as $feature ) : ?>
@@ -220,6 +226,12 @@ $saved_items   = $is_saved_view && function_exists( 'almasland_get_saved_cart_it
 						</h2>
 
 						<?php do_action( 'woocommerce_after_cart_item_name', $cart_item, $cart_item_key ); ?>
+
+						<?php
+						if ( function_exists( 'almasland_render_cart_item_delivery' ) ) {
+							almasland_render_cart_item_delivery( $_product );
+						}
+						?>
 
 						<?php if ( $product_features ) : ?>
 							<ul class="cart-item__features" aria-label="<?php esc_attr_e( 'ویژگی‌های محصول', 'almas-land' ); ?>">
