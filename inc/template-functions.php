@@ -383,7 +383,7 @@ function almasland_header_cart() {
 	<a class="header-action header-action--cart" href="<?php echo esc_url( wc_get_cart_url() ); ?>" aria-label="<?php esc_attr_e( 'سبد خرید', 'almas-land' ); ?>">
 		<span class="header-action__icon">
 			<svg viewBox="0 0 24 24" aria-hidden="true" fill="none"><path d="M7 18.5A1.5 1.5 0 1 0 7 21a1.5 1.5 0 0 0 0-2.5Zm10 0A1.5 1.5 0 1 0 17 21a1.5 1.5 0 0 0 0-2.5ZM6.2 6l.4 2h11.7l-1.1 5.2H8L6.4 4H3V2h5l.4 2H21l-2.2 11.2H7.8L7.3 13H19v2H7l-.8-4.2L5.3 6h.9Z" fill="currentColor"/></svg>
-			<span class="cart-count" data-cart-count><?php echo esc_html( almasland_persian_digits( $count ) ); ?></span>
+		<span class="cart-count" data-cart-count><?php echo esc_html( almasland_persian_digits( $count ) ); ?></span>
 		</span>
 		<span><?php esc_html_e( 'سبد خرید', 'almas-land' ); ?></span>
 	</a>
@@ -409,16 +409,16 @@ function almasland_persian_digits( $value ) {
 			}
 
 			$digits = array(
-				'0' => '۰',
-				'1' => '۱',
-				'2' => '۲',
-				'3' => '۳',
-				'4' => '۴',
-				'5' => '۵',
-				'6' => '۶',
-				'7' => '۷',
-				'8' => '۸',
-				'9' => '۹',
+			'0' => '۰',
+			'1' => '۱',
+			'2' => '۲',
+			'3' => '۳',
+			'4' => '۴',
+			'5' => '۵',
+			'6' => '۶',
+			'7' => '۷',
+			'8' => '۸',
+			'9' => '۹',
 			);
 
 			return $digits[ $token ];
@@ -1212,6 +1212,98 @@ function almasland_should_show_product_price( $product ) {
 }
 
 /**
+ * Secondary gallery image ID for product card hover swap.
+ *
+ * @param WC_Product|null $product Product.
+ * @return int
+ */
+function almasland_get_product_card_secondary_image_id( $product ) {
+	if ( ! $product instanceof WC_Product ) {
+		return 0;
+	}
+
+	$gallery_ids = $product->get_gallery_image_ids();
+
+	return ! empty( $gallery_ids ) ? (int) $gallery_ids[0] : 0;
+}
+
+/**
+ * Full-card overlay link for product cards.
+ *
+ * @param WC_Product|null $product Product.
+ * @param string          $label   Optional accessible label.
+ * @return void
+ */
+function almasland_render_product_card_overlay_link( $product, $label = '' ) {
+	if ( ! $product instanceof WC_Product ) {
+		return;
+	}
+
+	if ( '' === $label ) {
+		$label = almasland_get_product_card_title( $product );
+	}
+
+	printf(
+		'<a class="almas-card-link" href="%1$s" aria-label="%2$s"></a>',
+		esc_url( $product->get_permalink() ),
+		esc_attr(
+			sprintf(
+				/* translators: %s: product title */
+				__( 'مشاهده %s', 'almas-land' ),
+				$label
+			)
+		)
+	);
+}
+
+/**
+ * Product card media with optional hover image swap.
+ *
+ * @param WC_Product|null $product        Product.
+ * @param string          $wrapper_class  Optional extra class on media wrapper.
+ * @param string          $size           Image size.
+ * @param array           $image_attrs    Attributes for wp_get_attachment_image().
+ * @return void
+ */
+function almasland_render_product_card_media( $product, $wrapper_class = '', $size = 'almasland-card', $image_attrs = array() ) {
+	if ( ! $product instanceof WC_Product ) {
+		return;
+	}
+
+	$image_attrs = wp_parse_args(
+		$image_attrs,
+		array(
+			'loading'  => 'lazy',
+			'decoding' => 'async',
+		)
+	);
+
+	$secondary_id = almasland_get_product_card_secondary_image_id( $product );
+	$classes      = 'almas-card-media';
+
+	if ( $wrapper_class ) {
+		$classes .= ' ' . $wrapper_class;
+	}
+
+	if ( $secondary_id > 0 ) {
+		$classes .= ' almas-card-media--has-hover';
+	}
+
+	echo '<div class="' . esc_attr( $classes ) . '">';
+	echo '<div class="almas-card-media__image almas-card-media__image--primary">';
+	echo wp_kses_post( $product->get_image( $size, $image_attrs ) );
+	echo '</div>';
+
+	if ( $secondary_id > 0 ) {
+		echo '<div class="almas-card-media__image almas-card-media__image--secondary">';
+		echo wp_kses_post( wp_get_attachment_image( $secondary_id, $size, false, $image_attrs ) );
+		echo '</div>';
+	}
+
+	echo '</div>';
+}
+
+/**
  * Render modern product-card pricing footer or out-of-stock CTA.
  *
  * @param WC_Product|null $product Product.
@@ -1653,7 +1745,6 @@ function almasland_get_home_catalog_card_html( $product ) {
 		return '';
 	}
 
-	$product_link  = $product->get_permalink();
 	$summary       = almasland_get_product_card_summary( $product );
 	$is_used       = almasland_is_used_product( $product );
 	$grade         = almasland_get_product_card_grade( $product );
@@ -1672,14 +1763,16 @@ function almasland_get_home_catalog_card_html( $product ) {
 	ob_start();
 	?>
 	<article class="<?php echo esc_attr( $card_class ); ?>">
-		<a class="front-page-catalog-card__media" href="<?php echo esc_url( $product_link ); ?>">
-			<?php echo wp_kses_post( $product->get_image( 'almasland-card', array( 'loading' => 'lazy', 'decoding' => 'async' ) ) ); ?>
+		<?php almasland_render_product_card_overlay_link( $product ); ?>
+
+		<div class="front-page-catalog-card__media">
+			<?php almasland_render_product_card_media( $product ); ?>
 			<?php almasland_render_product_used_badge( $product ); ?>
-		</a>
+		</div>
 		<div class="front-page-catalog-card__body">
-			<a class="front-page-catalog-card__title" href="<?php echo esc_url( $product_link ); ?>">
+			<h3 class="front-page-catalog-card__title">
 				<?php echo esc_html( almasland_get_product_card_title( $product ) ); ?>
-			</a>
+			</h3>
 			<?php almasland_render_product_card_tags( $product, $grade, $grade_style ); ?>
 			<?php if ( $summary ) : ?>
 				<span class="front-page-catalog-card__specs"><?php echo esc_html( $summary ); ?></span>

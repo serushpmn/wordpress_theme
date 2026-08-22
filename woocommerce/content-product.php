@@ -22,7 +22,6 @@ if ( function_exists( 'wc_get_loop_prop' ) && wc_get_loop_prop( 'almasland_swipe
 	$card_classes .= ' swiper-slide';
 }
 
-$product_link = $product->get_permalink();
 $product_name = function_exists( 'almasland_get_product_card_title' ) ? almasland_get_product_card_title( $product ) : $product->get_name();
 $stock_class  = function_exists( 'almasland_stock_class' ) ? almasland_stock_class( $product ) : '';
 $summary      = function_exists( 'almasland_get_product_card_summary' ) ? almasland_get_product_card_summary( $product ) : '';
@@ -39,17 +38,27 @@ if ( $grade && ! empty( $grade['bg'] ) ) {
 }
 ?>
 <li <?php wc_product_class( $card_classes, $product ); ?>>
-	<a class="product-card__media" href="<?php echo esc_url( $product_link ); ?>">
-		<?php echo wp_kses_post( $product->get_image( 'almasland-card' ) ); ?>
+	<?php
+	if ( function_exists( 'almasland_render_product_card_overlay_link' ) ) {
+		almasland_render_product_card_overlay_link( $product, $product_name );
+	}
+	?>
+	<div class="product-card__media">
 		<?php
+		if ( function_exists( 'almasland_render_product_card_media' ) ) {
+			almasland_render_product_card_media( $product );
+		} else {
+			echo wp_kses_post( $product->get_image( 'almasland-card' ) );
+		}
+
 		if ( function_exists( 'almasland_render_product_used_badge' ) ) {
 			almasland_render_product_used_badge( $product );
 		}
 		?>
-	</a>
+	</div>
 	<div class="product-card__body">
 		<div class="product-card__info">
-			<a class="product-card__title" href="<?php echo esc_url( $product_link ); ?>"><?php echo esc_html( $product_name ); ?></a>
+			<h3 class="product-card__title"><?php echo esc_html( $product_name ); ?></h3>
 
 			<div class="product-card__meta">
 				<?php

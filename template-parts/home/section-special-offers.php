@@ -38,7 +38,6 @@ $view_all_url = add_query_arg( 'on_sale', '1', wc_get_page_permalink( 'shop' ) )
 		<div class="swiper-wrapper">
 			<?php foreach ( $products as $product ) : ?>
 				<?php
-				$product_link     = $product->get_permalink();
 				$summary          = almasland_get_product_card_summary( $product );
 				$is_used          = almasland_is_used_product( $product );
 				$grade            = almasland_get_product_card_grade( $product );
@@ -54,15 +53,17 @@ $view_all_url = add_query_arg( 'on_sale', '1', wc_get_page_permalink( 'shop' ) )
 				}
 				?>
 				<article class="front-page-offer-card swiper-slide<?php echo $is_used ? ' front-page-offer-card--used' : ''; ?>">
-					<a class="front-page-offer-card__media" href="<?php echo esc_url( $product_link ); ?>">
-						<?php echo wp_kses_post( $product->get_image( 'almasland-card', array( 'loading' => 'lazy', 'decoding' => 'async' ) ) ); ?>
+					<?php almasland_render_product_card_overlay_link( $product ); ?>
+
+					<div class="front-page-offer-card__media">
+						<?php almasland_render_product_card_media( $product ); ?>
 						<?php almasland_render_product_used_badge( $product ); ?>
-					</a>
+					</div>
 
 					<div class="front-page-offer-card__body">
-						<a class="front-page-offer-card__title" href="<?php echo esc_url( $product_link ); ?>">
+						<h3 class="front-page-offer-card__title">
 							<?php echo esc_html( almasland_get_product_card_title( $product ) ); ?>
-						</a>
+						</h3>
 
 						<?php almasland_render_product_card_tags( $product, $grade, $grade_style ); ?>
 

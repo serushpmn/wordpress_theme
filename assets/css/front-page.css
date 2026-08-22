@@ -772,6 +772,7 @@
   border-radius: clamp(14px, 1.6vw, 18px);
   background: var(--color-white);
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  cursor: pointer;
   transition: transform 0.22s ease, box-shadow 0.22s ease, background-color 0.22s ease, border-color 0.22s ease;
 }
 
@@ -810,7 +811,6 @@
   height: 170px;
   margin-bottom: 12px;
   padding-top: 18px;
-  text-decoration: none;
   overflow: hidden;
 }
 
@@ -835,17 +835,18 @@
 .front-page-offer-card__title {
   text-align: center;
   display: -webkit-box;
+  margin: 0;
   overflow: hidden;
   font-size: clamp(0.9rem, 1.05vw, 0.98rem);
   font-weight: 700;
   line-height: 1.5;
   color: var(--offers-secondary);
-  text-decoration: none;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
 }
 
 .front-page-offer-card__specs {
+  direction: ltr;
   text-align: center;
   margin: 0;
   display: -webkit-box;
@@ -1416,6 +1417,7 @@
 }
 
 .front-page-catalog-card {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1429,6 +1431,7 @@
   text-align: center;
   text-decoration: none;
   box-shadow: 0 10px 28px rgba(var(--color-secondary), 0.05);
+  cursor: pointer;
   transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
@@ -1474,17 +1477,18 @@
   display: -webkit-box;
   overflow: hidden;
   width: 100%;
+  margin: 0;
   font-size: clamp(0.88rem, 1.05vw, 0.98rem);
   font-weight: 700;
   line-height: 1.45;
   color: var(--catalog-secondary);
-  text-decoration: none;
   text-align: center;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
 }
 
 .front-page-catalog-card__specs {
+  direction: ltr;
   display: -webkit-box;
   overflow: hidden;
   width: 100%;
