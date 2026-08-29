@@ -197,10 +197,6 @@ add_filter( 'woocommerce_cart_totals_coupon_label', 'almasland_coupon_label', 10
  * @return string
  */
 function almasland_checkout_gettext( $translated, $text, $domain ) {
-	if ( ! function_exists( 'is_checkout' ) || ! is_checkout() || is_wc_endpoint_url( 'order-received' ) ) {
-		return $translated;
-	}
-
 	if ( 'woocommerce' !== $domain && 'default' !== $domain ) {
 		return $translated;
 	}
@@ -235,7 +231,26 @@ function almasland_checkout_gettext( $translated, $text, $domain ) {
 
 	return isset( $map[ $text ] ) ? $map[ $text ] : $translated;
 }
-add_filter( 'gettext', 'almasland_checkout_gettext', 20, 3 );
+
+/**
+ * Register the checkout string overrides, on the checkout only.
+ *
+ * `gettext` fires for every translated string on every request, so the filter
+ * used to run its own `is_checkout()` check thousands of times per page — and
+ * calling a conditional tag that early is fragile besides. Registering on `wp`
+ * resolves the page once; checkout markup is rendered later, on
+ * `template_redirect`, so no string is missed.
+ *
+ * @return void
+ */
+function almasland_register_checkout_gettext() {
+	if ( ! function_exists( 'is_checkout' ) || ! is_checkout() || is_wc_endpoint_url( 'order-received' ) ) {
+		return;
+	}
+
+	add_filter( 'gettext', 'almasland_checkout_gettext', 20, 3 );
+}
+add_action( 'wp', 'almasland_register_checkout_gettext' );
 
 /**
  * Privacy policy text in Persian.

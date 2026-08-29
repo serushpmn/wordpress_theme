@@ -192,6 +192,69 @@ function almasland_get_brand_attribute_taxonomy() {
 }
 
 /**
+ * Product IDs matching a mixed meta + taxonomy brand selection.
+ *
+ * @param string[] $meta_brands    Brand values stored in `_almas_brand`.
+ * @param string[] $tax_brands     Brand attribute term slugs.
+ * @param string   $brand_taxonomy Brand attribute taxonomy.
+ * @return int[]
+ */
+function almasland_get_shop_brand_post_ids( array $meta_brands, array $tax_brands, $brand_taxonomy ) {
+	sort( $meta_brands );
+	sort( $tax_brands );
+
+	return (array) almasland_cache_remember_persistent(
+		'shop_brand_ids:' . md5( (string) wp_json_encode( array( $meta_brands, $tax_brands, $brand_taxonomy ) ) ),
+		static function () use ( $meta_brands, $tax_brands, $brand_taxonomy ) {
+			$ids = array();
+
+			if ( $meta_brands ) {
+				$ids = array_merge(
+					$ids,
+					get_posts(
+						array(
+							'post_type'              => 'product',
+							'post_status'            => 'publish',
+							'posts_per_page'         => -1,
+							'fields'                 => 'ids',
+							'no_found_rows'          => true,
+							'update_post_meta_cache' => false,
+							'update_post_term_cache' => false,
+							'meta_query'             => array(
+								array(
+									'key'     => '_almas_brand',
+									'value'   => $meta_brands,
+									'compare' => 'IN',
+								),
+							),
+						)
+					)
+				);
+			}
+
+			if ( $tax_brands && $brand_taxonomy ) {
+				$term_ids = get_terms(
+					array(
+						'taxonomy'   => $brand_taxonomy,
+						'slug'       => $tax_brands,
+						'hide_empty' => false,
+						'fields'     => 'ids',
+					)
+				);
+
+				if ( ! is_wp_error( $term_ids ) && $term_ids ) {
+					// Cheaper than a second WP_Query: one term-relationship read.
+					$ids = array_merge( $ids, get_objects_in_term( $term_ids, $brand_taxonomy ) );
+				}
+			}
+
+			return array_values( array_unique( array_filter( array_map( 'absint', $ids ) ) ) );
+		},
+		HOUR_IN_SECONDS
+	);
+}
+
+/**
  * Get available shop brands.
  *
  * @return array<int, array{value:string, label:string, count:int}>
@@ -199,9 +262,14 @@ function almasland_get_brand_attribute_taxonomy() {
 function almasland_get_shop_brand_options() {
 	global $wpdb;
 
+	// Rendered by both the filter sidebar and the active-chip row.
+	if ( almasland_cache_has( 'shop_brand_options' ) ) {
+		return almasland_cache_get( 'shop_brand_options' );
+	}
+
 	$cached = get_transient( 'almasland_shop_brand_options' );
 	if ( is_array( $cached ) ) {
-		return $cached;
+		return almasland_cache_set( 'shop_brand_options', $cached );
 	}
 
 	$brands = array();
@@ -261,7 +329,7 @@ function almasland_get_shop_brand_options() {
 
 	set_transient( 'almasland_shop_brand_options', $brands, HOUR_IN_SECONDS );
 
-	return $brands;
+	return almasland_cache_set( 'shop_brand_options', $brands );
 }
 
 /**
@@ -373,67 +441,51 @@ function almasland_apply_shop_filters( $query ) {
 		}
 
 		$brand_taxonomy = almasland_get_brand_attribute_taxonomy();
-		$brand_ids      = array();
 
-		if ( $meta_brands ) {
-			$meta_ids = get_posts(
-				array(
-					'post_type'              => 'product',
-					'post_status'            => 'publish',
-					'posts_per_page'         => -1,
-					'fields'                 => 'ids',
-					'no_found_rows'          => true,
-					'update_post_meta_cache' => false,
-					'update_post_term_cache' => false,
-					'meta_query'             => array(
-						array(
-							'key'     => '_almas_brand',
-							'value'   => $meta_brands,
-							'compare' => 'IN',
-						),
-					),
-				)
+		if ( ! $brand_taxonomy ) {
+			$tax_brands = array();
+		}
+
+		if ( $meta_brands && ! $tax_brands ) {
+			// Native meta filter — no full catalog ID dump.
+			$meta_query[] = array(
+				'key'     => '_almas_brand',
+				'value'   => $meta_brands,
+				'compare' => 'IN',
 			);
-			$brand_ids = array_merge( $brand_ids, array_map( 'absint', $meta_ids ) );
-		}
-
-		if ( $tax_brands && $brand_taxonomy ) {
-			$tax_ids = get_posts(
-				array(
-					'post_type'              => 'product',
-					'post_status'            => 'publish',
-					'posts_per_page'         => -1,
-					'fields'                 => 'ids',
-					'no_found_rows'          => true,
-					'update_post_meta_cache' => false,
-					'update_post_term_cache' => false,
-					'tax_query'              => array(
-						array(
-							'taxonomy' => $brand_taxonomy,
-							'field'    => 'slug',
-							'terms'    => $tax_brands,
-							'operator' => 'IN',
-						),
-					),
-				)
+		} elseif ( $tax_brands && ! $meta_brands ) {
+			// Native taxonomy filter — resolved by the term relationship join.
+			$tax_query[] = array(
+				'taxonomy' => $brand_taxonomy,
+				'field'    => 'slug',
+				'terms'    => $tax_brands,
+				'operator' => 'IN',
 			);
-			$brand_ids = array_merge( $brand_ids, array_map( 'absint', $tax_ids ) );
-		}
+		} elseif ( $meta_brands && $tax_brands ) {
+			/*
+			 * Mixing meta and taxonomy brands needs an OR between a meta clause
+			 * and a tax clause, which WP_Query cannot express. This rare case
+			 * still resolves an ID union, but the union is cached.
+			 */
+			$brand_ids = almasland_get_shop_brand_post_ids( $meta_brands, $tax_brands, $brand_taxonomy );
 
-		$brand_ids = array_values( array_unique( array_filter( $brand_ids ) ) );
-		if ( empty( $brand_ids ) ) {
-			$brand_ids = array( 0 );
-		}
-
-		$existing_in = $query->get( 'post__in' );
-		if ( ! empty( $existing_in ) ) {
-			$brand_ids = array_values( array_intersect( array_map( 'absint', (array) $existing_in ), $brand_ids ) );
 			if ( empty( $brand_ids ) ) {
 				$brand_ids = array( 0 );
 			}
-		}
 
-		$query->set( 'post__in', $brand_ids );
+			$existing_in = $query->get( 'post__in' );
+			if ( ! empty( $existing_in ) ) {
+				$brand_ids = array_values( array_intersect( array_map( 'absint', (array) $existing_in ), $brand_ids ) );
+				if ( empty( $brand_ids ) ) {
+					$brand_ids = array( 0 );
+				}
+			}
+
+			$query->set( 'post__in', $brand_ids );
+		} else {
+			// Taxonomy brands were requested but the site has no brand attribute.
+			$query->set( 'post__in', array( 0 ) );
+		}
 	}
 
 	if ( ! empty( $state['filter_cat'] ) ) {
@@ -665,19 +717,24 @@ function almasland_get_shop_nav_categories() {
 		return array();
 	}
 
-	$exclude = array_filter( array( (int) get_option( 'default_product_cat', 0 ) ) );
-	$terms   = get_terms(
-		array(
-			'taxonomy'   => 'product_cat',
-			'parent'     => 0,
-			'hide_empty' => true,
-			'exclude'    => $exclude,
-			'orderby'    => 'name',
-			'order'      => 'ASC',
-		)
-	);
+	return (array) almasland_cache_remember(
+		'shop_nav_categories',
+		static function () {
+			$exclude = array_filter( array( (int) get_option( 'default_product_cat', 0 ) ) );
+			$terms   = get_terms(
+				array(
+					'taxonomy'   => 'product_cat',
+					'parent'     => 0,
+					'hide_empty' => true,
+					'exclude'    => $exclude,
+					'orderby'    => 'name',
+					'order'      => 'ASC',
+				)
+			);
 
-	return is_wp_error( $terms ) ? array() : $terms;
+			return is_wp_error( $terms ) ? array() : $terms;
+		}
+	);
 }
 
 /**

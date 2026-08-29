@@ -13,20 +13,69 @@ define( 'ALMASLAND_VERSION', '1.3.7' );
 define( 'ALMASLAND_DIR', get_template_directory() );
 define( 'ALMASLAND_URI', get_template_directory_uri() );
 
+require ALMASLAND_DIR . '/inc/cache.php';
 require ALMASLAND_DIR . '/inc/template-functions.php';
 require ALMASLAND_DIR . '/inc/nav-walker.php';
-require ALMASLAND_DIR . '/inc/customizer.php';
 require ALMASLAND_DIR . '/inc/theme-panel/bootstrap.php';
+
+// Customizer registration only ever runs in wp-admin or the customizer preview.
+if ( is_admin() || is_customize_preview() ) {
+	require ALMASLAND_DIR . '/inc/customizer.php';
+}
 
 if ( class_exists( 'WooCommerce' ) ) {
 	require ALMASLAND_DIR . '/inc/product-fields.php';
 	require ALMASLAND_DIR . '/inc/product-badges.php';
 	require ALMASLAND_DIR . '/inc/shop-filters.php';
-	require ALMASLAND_DIR . '/inc/cart-save-for-later.php';
-	require ALMASLAND_DIR . '/inc/used-device-health-report.php';
 	require ALMASLAND_DIR . '/inc/woocommerce.php';
 	require ALMASLAND_DIR . '/inc/checkout-fields.php';
 }
+
+/**
+ * Load the used-device health report module on demand.
+ *
+ * The module registers no hooks and is only consumed by the single product
+ * template, so it stays out of every other request.
+ *
+ * @return void
+ */
+function almasland_load_used_device_health_report() {
+	if ( ! class_exists( 'WooCommerce' ) ) {
+		return;
+	}
+
+	require_once ALMASLAND_DIR . '/inc/used-device-health-report.php';
+}
+
+/**
+ * Load WooCommerce modules that are only needed on specific screens.
+ *
+ * Runs on `wp` so the query is resolved but every hook these modules register
+ * (earliest is `template_redirect`) is still ahead of us.
+ *
+ * @return void
+ */
+function almasland_load_conditional_modules() {
+	if ( ! class_exists( 'WooCommerce' ) ) {
+		return;
+	}
+
+	if ( function_exists( 'is_cart' ) && is_cart() ) {
+		require_once ALMASLAND_DIR . '/inc/cart-save-for-later.php';
+	}
+
+	// Only used products can render a health report, and the single-product
+	// template loads the module itself before calling into it, so this is a
+	// fast path rather than the only guard.
+	if ( function_exists( 'is_product' ) && is_product() ) {
+		$queried = wc_get_product( get_queried_object_id() );
+
+		if ( $queried && almasland_is_used_product( $queried ) ) {
+			almasland_load_used_device_health_report();
+		}
+	}
+}
+add_action( 'wp', 'almasland_load_conditional_modules', 5 );
 
 if ( ! function_exists( 'almasland_setup' ) ) {
 	/**
@@ -129,37 +178,64 @@ function almasland_widgets_init() {
 add_action( 'widgets_init', 'almasland_widgets_init' );
 
 /**
+ * Whether the current request renders a product catalog listing.
+ *
+ * Covers the shop page, product taxonomy archives and product search results —
+ * every screen served by `woocommerce/archive-product.php`.
+ *
+ * @return bool
+ */
+function almasland_is_shop_context() {
+	if ( ! function_exists( 'is_shop' ) ) {
+		return false;
+	}
+
+	if ( is_shop() || is_product_taxonomy() ) {
+		return true;
+	}
+
+	if ( ! is_search() ) {
+		return false;
+	}
+
+	$post_type = get_query_var( 'post_type' );
+
+	return 'product' === $post_type || ( is_array( $post_type ) && in_array( 'product', $post_type, true ) );
+}
+
+/**
+ * Whether the current request renders markup styled by the blog module.
+ *
+ * Besides the post templates this covers any singular screen that outputs
+ * `comments.php`, because the comment list uses the `.blog-comments` styles.
+ *
+ * @return bool
+ */
+function almasland_is_blog_context() {
+	if ( is_home() || is_singular( 'post' ) || is_category() || is_tag() || is_author() || is_date() || is_search() ) {
+		return true;
+	}
+
+	return is_singular() && ( comments_open() || get_comments_number() );
+}
+
+/**
  * Enqueue front-end assets.
+ *
+ * `assets/src/style.css` and `assets/src/main.js` are split into page-context
+ * modules (see tools/split-css.mjs and PERFORMANCE-FRONTEND.md); only the
+ * modules a template can actually use are loaded.
  */
 function almasland_enqueue_assets() {
-	$style_deps  = array( 'almasland-theme' );
-	$script_deps = array();
-
 	wp_enqueue_style( 'almasland-theme', get_stylesheet_uri(), array(), ALMASLAND_VERSION );
-	wp_enqueue_style( 'almasland-main', ALMASLAND_URI . '/assets/css/style.css', $style_deps, ALMASLAND_VERSION );
+	wp_enqueue_style( 'almasland-base', ALMASLAND_URI . '/assets/css/base.css', array( 'almasland-theme' ), ALMASLAND_VERSION );
 
-	if ( is_front_page() ) {
-		wp_enqueue_style( 'almasland-front-page', ALMASLAND_URI . '/assets/css/front-page.css', array( 'almasland-main' ), ALMASLAND_VERSION );
-		wp_enqueue_style( 'almasland-swiper', ALMASLAND_URI . '/assets/vendor/swiper/swiper-bundle.min.css', array(), '11.0.0' );
-		wp_enqueue_script( 'almasland-swiper', ALMASLAND_URI . '/assets/vendor/swiper/swiper-bundle.min.js', array(), '11.0.0', true );
-		wp_script_add_data( 'almasland-swiper', 'strategy', 'defer' );
-		$script_deps[] = 'almasland-swiper';
-	}
-
-	if ( function_exists( 'is_product' ) && is_product() ) {
-		wp_enqueue_script( 'wc-add-to-cart-variation' );
-		$script_deps[] = 'jquery';
-		$script_deps[] = 'wc-add-to-cart-variation';
-	}
-
-	if ( function_exists( 'is_checkout' ) && is_checkout() && ! is_order_received_page() ) {
-		$script_deps[] = 'jquery';
-	}
-
-	wp_enqueue_script( 'almasland-main', ALMASLAND_URI . '/assets/js/main.js', $script_deps, ALMASLAND_VERSION, true );
-	wp_script_add_data( 'almasland-main', 'strategy', 'defer' );
+	// Core script is always present; page modules depend on it, which both
+	// guarantees load order and keeps `defer` execution order intact.
+	wp_enqueue_script( 'almasland-core', ALMASLAND_URI . '/assets/js/core.js', array(), ALMASLAND_VERSION, true );
+	wp_script_add_data( 'almasland-core', 'strategy', 'defer' );
 	wp_localize_script(
-		'almasland-main',
+		'almasland-core',
 		'almasLandTheme',
 		array(
 			'ajaxUrl'      => admin_url( 'admin-ajax.php' ),
@@ -173,6 +249,75 @@ function almasland_enqueue_assets() {
 		)
 	);
 
+	/*
+	 * Style modules are listed in the same order they appeared in the source
+	 * stylesheet, so the cascade between any two that load together is
+	 * unchanged. `$last_style` tracks the final one so panel/customizer CSS
+	 * keeps overriding everything, exactly as it did after the monolith.
+	 */
+	$last_style = 'almasland-base';
+
+	$is_shop     = almasland_is_shop_context();
+	$is_product  = function_exists( 'is_product' ) && is_product();
+	$is_cart     = function_exists( 'is_cart' ) && is_cart();
+	$is_checkout = function_exists( 'is_checkout' ) && is_checkout();
+
+	$style_modules = array(
+		'shop'          => $is_shop,
+		'product'       => $is_product,
+		'cart-checkout' => $is_cart || $is_checkout,
+		'account'       => function_exists( 'is_account_page' ) && is_account_page(),
+		'blog'          => almasland_is_blog_context(),
+	);
+
+	foreach ( $style_modules as $module => $needed ) {
+		if ( ! $needed ) {
+			continue;
+		}
+
+		$handle = 'almasland-' . $module;
+		wp_enqueue_style( $handle, ALMASLAND_URI . '/assets/css/' . $module . '.css', array( 'almasland-base' ), ALMASLAND_VERSION );
+		$last_style = $handle;
+	}
+
+	if ( $is_shop ) {
+		wp_enqueue_script( 'almasland-shop', ALMASLAND_URI . '/assets/js/shop.js', array( 'almasland-core' ), ALMASLAND_VERSION, true );
+		wp_script_add_data( 'almasland-shop', 'strategy', 'defer' );
+	}
+
+	if ( $is_product ) {
+		wp_enqueue_script( 'wc-add-to-cart-variation' );
+		wp_enqueue_script(
+			'almasland-product',
+			ALMASLAND_URI . '/assets/js/product.js',
+			array( 'almasland-core', 'jquery', 'wc-add-to-cart-variation' ),
+			ALMASLAND_VERSION,
+			true
+		);
+		wp_script_add_data( 'almasland-product', 'strategy', 'defer' );
+	}
+
+	if ( $is_cart ) {
+		wp_enqueue_script( 'almasland-cart', ALMASLAND_URI . '/assets/js/cart.js', array( 'almasland-core' ), ALMASLAND_VERSION, true );
+		wp_script_add_data( 'almasland-cart', 'strategy', 'defer' );
+	}
+
+	if ( $is_checkout && ! is_order_received_page() ) {
+		wp_enqueue_script( 'almasland-checkout', ALMASLAND_URI . '/assets/js/checkout.js', array( 'almasland-core', 'jquery' ), ALMASLAND_VERSION, true );
+		wp_script_add_data( 'almasland-checkout', 'strategy', 'defer' );
+	}
+
+	if ( is_front_page() ) {
+		wp_enqueue_style( 'almasland-swiper', ALMASLAND_URI . '/assets/vendor/swiper/swiper-bundle.min.css', array(), '11.0.0' );
+		wp_enqueue_style( 'almasland-front-page', ALMASLAND_URI . '/assets/css/front-page.css', array( 'almasland-base' ), ALMASLAND_VERSION );
+
+		wp_enqueue_script( 'almasland-swiper', ALMASLAND_URI . '/assets/vendor/swiper/swiper-bundle.min.js', array(), '11.0.0', true );
+		wp_script_add_data( 'almasland-swiper', 'strategy', 'defer' );
+
+		wp_enqueue_script( 'almasland-home', ALMASLAND_URI . '/assets/js/home.js', array( 'almasland-core', 'almasland-swiper' ), ALMASLAND_VERSION, true );
+		wp_script_add_data( 'almasland-home', 'strategy', 'defer' );
+	}
+
 	$custom = function_exists( 'almasland_sanitize_custom_css' ) ? almasland_sanitize_custom_css( almasland_get_panel( 'identity', 'custom_css', '' ) ) : '';
 	$inline = function_exists( 'almasland_get_theme_color_css' ) ? almasland_get_theme_color_css() : '';
 
@@ -180,7 +325,7 @@ function almasland_enqueue_assets() {
 		$inline .= $custom;
 	}
 	if ( $inline ) {
-		wp_add_inline_style( 'almasland-main', $inline );
+		wp_add_inline_style( $last_style, $inline );
 	}
 }
 add_action( 'wp_enqueue_scripts', 'almasland_enqueue_assets' );
@@ -285,8 +430,12 @@ add_action( 'wp_head', 'almasland_preload_font', 1 );
 
 /**
  * Add editor styles.
+ *
+ * The editor keeps the unsplit stylesheet: it renders arbitrary block content
+ * with no page context to select modules from, and it is admin-only, so the
+ * split brings no benefit there.
  */
 function almasland_editor_assets() {
-	add_editor_style( 'assets/css/style.css' );
+	add_editor_style( 'assets/src/style.css' );
 }
 add_action( 'admin_init', 'almasland_editor_assets' );

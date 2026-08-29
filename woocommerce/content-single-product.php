@@ -32,6 +32,11 @@ $rating           = $product->get_average_rating();
 $stock_qty   = $product->get_stock_quantity();
 $is_variable = $product->is_type( 'variable' );
 $is_used_product = function_exists( 'almasland_is_used_product' ) ? almasland_is_used_product( $product ) : has_term( 'used', 'product_cat', $product->get_id() );
+
+if ( $is_used_product && function_exists( 'almasland_load_used_device_health_report' ) ) {
+	almasland_load_used_device_health_report();
+}
+
 $has_used_health_report = $is_used_product && function_exists( 'almasland_product_has_used_health_report' ) && almasland_product_has_used_health_report( $product );
 $show_standard_product_specs = ! $has_used_health_report;
 $stock_label = $is_variable

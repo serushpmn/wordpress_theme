@@ -31,7 +31,23 @@ add_filter( 'woocommerce_enqueue_styles', 'almasland_dequeue_woocommerce_styles'
  * @return string
  */
 function almasland_format_wc_price_html( $price_html ) {
-	return almasland_persian_price( $price_html );
+	if ( ! is_string( $price_html ) || '' === $price_html ) {
+		return almasland_persian_price( $price_html );
+	}
+
+	// wc_price() fires dozens of times per archive with a small set of distinct
+	// strings, and the transform depends only on its input.
+	static $memo = array();
+
+	if ( ! isset( $memo[ $price_html ] ) ) {
+		if ( count( $memo ) > 500 ) {
+			$memo = array();
+		}
+
+		$memo[ $price_html ] = almasland_persian_price( $price_html );
+	}
+
+	return $memo[ $price_html ];
 }
 add_filter( 'wc_price', 'almasland_format_wc_price_html', 20 );
 
@@ -77,8 +93,15 @@ add_action( 'wp_enqueue_scripts', 'almasland_dequeue_wc_block_styles', 100 );
 
 /**
  * Remove default single-product hooks replaced by the theme template.
+ *
+ * These hooks only ever fire while rendering a single product, so there is
+ * nothing to remove anywhere else.
  */
 function almasland_remove_default_wc_single_hooks() {
+	if ( ! is_product() ) {
+		return;
+	}
+
 	remove_action( 'woocommerce_before_single_product_summary', 'woocommerce_show_product_sale_flash', 10 );
 	remove_action( 'woocommerce_before_single_product_summary', 'woocommerce_show_product_images', 20 );
 	remove_action( 'woocommerce_single_product_summary', 'woocommerce_template_single_title', 5 );
@@ -192,39 +215,401 @@ function almasland_cart_fragments( $fragments ) {
 }
 add_filter( 'woocommerce_add_to_cart_fragments', 'almasland_cart_fragments' );
 
+/*
+ * `loop_shop_columns` and `loop_shop_per_page` are owned by
+ * almasland_shop_columns() / almasland_shop_per_page() in functions.php, which
+ * read the theme panel at priority 20. The hardcoded 4 / 12 handlers that used
+ * to live here ran at priority 10 and were overwritten every time.
+ */
+
 /**
- * Product loop columns.
+ * Prime post/term/attachment caches for the archive product loop.
+ *
+ * WP_Query primes posts, meta and terms, but not the attachments each card
+ * renders, which would otherwise be one lookup per image.
+ *
+ * @return void
+ */
+function almasland_prime_shop_loop_caches() {
+	global $wp_query;
+
+	if ( ! $wp_query instanceof WP_Query || empty( $wp_query->posts ) ) {
+		return;
+	}
+
+	$ids = array();
+
+	foreach ( $wp_query->posts as $loop_post ) {
+		if ( ! is_object( $loop_post ) ) {
+			$ids[] = (int) $loop_post;
+			continue;
+		}
+
+		// Shortcode loops can run against a non-product query.
+		if ( isset( $loop_post->post_type ) && 'product' !== $loop_post->post_type ) {
+			continue;
+		}
+
+		$ids[] = (int) $loop_post->ID;
+	}
+
+	almasland_prime_product_caches( $ids );
+}
+add_action( 'woocommerce_before_shop_loop', 'almasland_prime_shop_loop_caches', 5 );
+
+/**
+ * How many related products to show on the single product page.
  *
  * @return int
  */
-function almasland_loop_columns() {
-	return 4;
+function almasland_related_products_limit() {
+	return (int) apply_filters( 'almasland_related_products_limit', 8 );
 }
-add_filter( 'loop_shop_columns', 'almasland_loop_columns' );
 
 /**
- * Products per page.
- *
- * @return int
- */
-function almasland_products_per_page() {
-	return 12;
-}
-add_filter( 'loop_shop_per_page', 'almasland_products_per_page' );
-
-/**
- * Related products args.
+ * Related products args (kept for any core / plugin path that still uses it).
  *
  * @param array $args Args.
  * @return array
  */
 function almasland_related_products_args( $args ) {
-	$args['posts_per_page'] = 3;
-	$args['columns']        = 3;
+	$limit = almasland_related_products_limit();
+
+	$args['posts_per_page'] = $limit;
+	$args['columns']        = 4;
 
 	return $args;
 }
 add_filter( 'woocommerce_output_related_products_args', 'almasland_related_products_args' );
+
+/**
+ * Replace WooCommerce's category/tag related list with the theme's ranking.
+ *
+ * Priority: same brand + same category, then similar price (in stock only).
+ *
+ * @param int[] $related_posts Related product IDs.
+ * @param int   $product_id    Product ID.
+ * @param array $args          Query args (limit, excluded_ids, …).
+ * @return int[]
+ */
+function almasland_filter_related_product_ids( $related_posts, $product_id, $args ) {
+	unset( $related_posts );
+
+	$product = wc_get_product( $product_id );
+	if ( ! $product instanceof WC_Product ) {
+		return array();
+	}
+
+	$limit   = isset( $args['limit'] ) ? max( 1, (int) $args['limit'] ) : almasland_related_products_limit();
+	$exclude = isset( $args['excluded_ids'] ) ? array_map( 'absint', (array) $args['excluded_ids'] ) : array();
+
+	return almasland_get_related_product_ids( $product, $limit, $exclude );
+}
+add_filter( 'woocommerce_related_products', 'almasland_filter_related_product_ids', 10, 3 );
+
+/**
+ * Build related product IDs with the theme ranking rules.
+ *
+ * 1. Same brand and same category (in stock preferred).
+ * 2. Fill remaining slots with a similar price band, in stock only.
+ *
+ * @param WC_Product $product Product.
+ * @param int        $limit   Max IDs to return.
+ * @param int[]      $exclude Extra IDs to exclude (upsells, etc.).
+ * @return int[]
+ */
+function almasland_get_related_product_ids( $product, $limit = 8, $exclude = array() ) {
+	if ( ! $product instanceof WC_Product ) {
+		return array();
+	}
+
+	$limit      = max( 1, (int) $limit );
+	$product_id = (int) $product->get_id();
+	$exclude    = array_values(
+		array_unique(
+			array_filter(
+				array_merge(
+					array( $product_id ),
+					array_map( 'absint', (array) $exclude ),
+					array_map( 'absint', (array) $product->get_upsell_ids() ),
+					array_map( 'absint', (array) $product->get_children() )
+				)
+			)
+		)
+	);
+
+	$cache_key = 'related_product_ids:' . $product_id . ':' . $limit . ':' . md5( (string) wp_json_encode( $exclude ) );
+
+	return (array) almasland_cache_remember(
+		$cache_key,
+		static function () use ( $product, $limit, $exclude ) {
+			$ids = almasland_query_related_by_brand_and_category( $product, $limit, $exclude );
+
+			if ( count( $ids ) < $limit ) {
+				$price_ids = almasland_query_related_by_price(
+					$product,
+					$limit - count( $ids ),
+					array_merge( $exclude, $ids )
+				);
+				$ids = array_merge( $ids, $price_ids );
+			}
+
+			return array_values( array_map( 'absint', $ids ) );
+		}
+	);
+}
+
+/**
+ * Category term IDs used for related matching (excludes Uncategorized).
+ *
+ * Prefers leaf categories when the product has both parent and child terms.
+ *
+ * @param WC_Product $product Product.
+ * @return int[]
+ */
+function almasland_get_related_category_ids( $product ) {
+	$cat_ids = array_map( 'absint', (array) $product->get_category_ids() );
+	$default = (int) get_option( 'default_product_cat', 0 );
+
+	if ( $default ) {
+		$cat_ids = array_values( array_diff( $cat_ids, array( $default ) ) );
+	}
+
+	if ( empty( $cat_ids ) ) {
+		return array();
+	}
+
+	$leaves = array();
+
+	foreach ( $cat_ids as $cat_id ) {
+		$is_leaf = true;
+
+		foreach ( $cat_ids as $other_id ) {
+			if ( $other_id !== $cat_id && term_is_ancestor_of( $cat_id, $other_id, 'product_cat' ) ) {
+				$is_leaf = false;
+				break;
+			}
+		}
+
+		if ( $is_leaf ) {
+			$leaves[] = $cat_id;
+		}
+	}
+
+	return ! empty( $leaves ) ? $leaves : $cat_ids;
+}
+
+/**
+ * Brand query clauses for the current product (taxonomy and/or meta).
+ *
+ * @param WC_Product $product Product.
+ * @return array{tax_query:array,meta_query:array}
+ */
+function almasland_get_related_brand_clauses( $product ) {
+	$tax_query  = array();
+	$meta_query = array();
+	$source     = function_exists( 'almasland_get_product_meta_owner' ) ? almasland_get_product_meta_owner( $product ) : $product;
+	$source     = $source instanceof WC_Product ? $source : $product;
+
+	if ( function_exists( 'almasland_get_brand_attribute_taxonomy' ) ) {
+		$taxonomy = almasland_get_brand_attribute_taxonomy();
+
+		if ( $taxonomy ) {
+			$term_ids = wc_get_product_term_ids( $source->get_id(), $taxonomy );
+
+			if ( ! empty( $term_ids ) ) {
+				$tax_query[] = array(
+					'taxonomy' => $taxonomy,
+					'field'    => 'term_id',
+					'terms'    => $term_ids,
+					'operator' => 'IN',
+				);
+			}
+		}
+	}
+
+	$brand_meta = trim( (string) $source->get_meta( '_almas_brand' ) );
+
+	if ( '' !== $brand_meta ) {
+		$meta_query[] = array(
+			'key'   => '_almas_brand',
+			'value' => $brand_meta,
+		);
+	}
+
+	return array(
+		'tax_query'  => $tax_query,
+		'meta_query' => $meta_query,
+	);
+}
+
+/**
+ * Shared wc_get_products defaults for related lookups.
+ *
+ * @param int   $limit   Limit.
+ * @param int[] $exclude Exclude IDs.
+ * @return array<string, mixed>
+ */
+function almasland_related_products_query_defaults( $limit, array $exclude ) {
+	return array(
+		'status'     => 'publish',
+		'type'       => array( 'simple', 'variable', 'external', 'grouped' ),
+		'limit'      => max( 1, (int) $limit ),
+		'exclude'    => $exclude,
+		'visibility' => 'catalog',
+		'return'     => 'ids',
+		'orderby'    => 'date',
+		'order'      => 'DESC',
+		'paginate'   => false,
+	);
+}
+
+/**
+ * Attach a product_cat tax clause to a query args array.
+ *
+ * @param array $args         Query args.
+ * @param int[] $category_ids Category term IDs.
+ * @return array
+ */
+function almasland_related_with_categories( array $args, array $category_ids ) {
+	if ( empty( $category_ids ) ) {
+		return $args;
+	}
+
+	if ( empty( $args['tax_query'] ) || ! is_array( $args['tax_query'] ) ) {
+		$args['tax_query'] = array();
+	}
+
+	$args['tax_query'][] = array(
+		'taxonomy' => 'product_cat',
+		'field'    => 'term_id',
+		'terms'    => array_map( 'absint', $category_ids ),
+		'operator' => 'IN',
+	);
+
+	return $args;
+}
+
+/**
+ * Phase 1: same brand and same category.
+ *
+ * @param WC_Product $product Product.
+ * @param int        $limit   Limit.
+ * @param int[]      $exclude Exclude IDs.
+ * @return int[]
+ */
+function almasland_query_related_by_brand_and_category( $product, $limit, array $exclude ) {
+	$category_ids = almasland_get_related_category_ids( $product );
+	$brand        = almasland_get_related_brand_clauses( $product );
+
+	if ( empty( $category_ids ) || ( empty( $brand['tax_query'] ) && empty( $brand['meta_query'] ) ) ) {
+		return array();
+	}
+
+	$base                 = almasland_related_products_query_defaults( $limit, $exclude );
+	$base['stock_status'] = 'instock';
+	$base                 = almasland_related_with_categories( $base, $category_ids );
+
+	// Brand may live in taxonomy OR meta — either match is enough.
+	if ( ! empty( $brand['tax_query'] ) && ! empty( $brand['meta_query'] ) ) {
+		$tax_args                = $base;
+		$meta_args               = $base;
+		$tax_args['tax_query']   = array_merge( $tax_args['tax_query'], $brand['tax_query'] );
+		$meta_args['meta_query'] = $brand['meta_query'];
+
+		$ids = array_map( 'absint', (array) wc_get_products( $tax_args ) );
+		if ( count( $ids ) < $limit ) {
+			$meta_args['limit']   = $limit - count( $ids );
+			$meta_args['exclude'] = array_merge( $exclude, $ids );
+			$ids                  = array_merge( $ids, array_map( 'absint', (array) wc_get_products( $meta_args ) ) );
+		}
+
+		return array_values( array_unique( $ids ) );
+	}
+
+	if ( ! empty( $brand['tax_query'] ) ) {
+		$base['tax_query'] = array_merge( $base['tax_query'], $brand['tax_query'] );
+	}
+
+	if ( ! empty( $brand['meta_query'] ) ) {
+		$base['meta_query'] = $brand['meta_query'];
+	}
+
+	return array_values( array_map( 'absint', (array) wc_get_products( $base ) ) );
+}
+
+/**
+ * Phase 2: similar price band, in stock only.
+ *
+ * Price window is ±30% of the product's display price (min variation for
+ * variable products). Products with no price skip this phase.
+ *
+ * @param WC_Product $product Product.
+ * @param int        $limit   Limit.
+ * @param int[]      $exclude Exclude IDs.
+ * @return int[]
+ */
+function almasland_query_related_by_price( $product, $limit, array $exclude ) {
+	$limit = max( 1, (int) $limit );
+	$price = almasland_get_related_reference_price( $product );
+
+	if ( $price <= 0 ) {
+		return array();
+	}
+
+	$min = max( 0, $price * 0.7 );
+	$max = $price * 1.3;
+
+	$args                 = almasland_related_products_query_defaults( $limit, $exclude );
+	$args['stock_status'] = 'instock';
+	$args['meta_query']   = array(
+		array(
+			'key'     => '_price',
+			'value'   => array( $min, $max ),
+			'type'    => 'DECIMAL',
+			'compare' => 'BETWEEN',
+		),
+	);
+
+	// Prefer filling from the same category when possible, then widen.
+	$category_ids = almasland_get_related_category_ids( $product );
+	$ids          = array();
+
+	if ( ! empty( $category_ids ) ) {
+		$same_cat = almasland_related_with_categories( $args, $category_ids );
+		$ids      = array_map( 'absint', (array) wc_get_products( $same_cat ) );
+	}
+
+	if ( count( $ids ) < $limit ) {
+		$args['limit']   = $limit - count( $ids );
+		$args['exclude'] = array_merge( $exclude, $ids );
+		$ids             = array_merge( $ids, array_map( 'absint', (array) wc_get_products( $args ) ) );
+	}
+
+	return array_values( array_unique( $ids ) );
+}
+
+/**
+ * Reference price used for the related price band.
+ *
+ * @param WC_Product $product Product.
+ * @return float
+ */
+function almasland_get_related_reference_price( $product ) {
+	if ( ! $product instanceof WC_Product ) {
+		return 0.0;
+	}
+
+	if ( $product->is_type( 'variable' ) ) {
+		$min = $product->get_variation_price( 'min', true );
+
+		return is_numeric( $min ) ? (float) $min : 0.0;
+	}
+
+	$price = $product->get_price();
+
+	return is_numeric( $price ) ? (float) $price : 0.0;
+}
 
 /**
  * Output related products with HTML prototype markup.
@@ -236,15 +621,28 @@ function almasland_output_related_products() {
 		return;
 	}
 
-	$related = wc_get_related_products( $product->get_id(), 3 );
+	$limit   = almasland_related_products_limit();
+	$related = almasland_get_related_product_ids( $product, $limit );
+
 	if ( empty( $related ) ) {
 		return;
 	}
 
-	$terms = wc_get_product_terms( $product->get_id(), 'product_cat', array( 'number' => 1 ) );
-	$term  = ! empty( $terms ) && ! is_wp_error( $terms ) ? reset( $terms ) : null;
+	almasland_prime_product_caches( $related );
+
+	$category_ids = almasland_get_related_category_ids( $product );
+	$term         = null;
+
+	if ( ! empty( $category_ids ) ) {
+		$term = get_term( (int) $category_ids[0], 'product_cat' );
+		if ( ! $term || is_wp_error( $term ) ) {
+			$term = null;
+		}
+	}
 
 	wc_set_loop_prop( 'is_related', true );
+	wc_set_loop_prop( 'name', 'related' );
+	wc_set_loop_prop( 'columns', 4 );
 
 	?>
 	<section class="related-products" aria-labelledby="related-title">
@@ -254,7 +652,28 @@ function almasland_output_related_products() {
 				<a href="<?php echo esc_url( get_term_link( $term ) ); ?>"><?php esc_html_e( 'مشاهده همه', 'almas-land' ); ?></a>
 			<?php endif; ?>
 		</div>
-		<?php woocommerce_related_products( array( 'posts_per_page' => 3, 'columns' => 3 ) ); ?>
+		<?php
+		woocommerce_product_loop_start();
+
+		foreach ( $related as $related_id ) {
+			$related_product = wc_get_product( $related_id );
+			if ( ! $related_product ) {
+				continue;
+			}
+
+			$post_object = get_post( $related_product->get_id() );
+			if ( ! $post_object ) {
+				continue;
+			}
+
+			$GLOBALS['post'] = $post_object; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
+			setup_postdata( $GLOBALS['post'] );
+			wc_get_template_part( 'content', 'product' );
+		}
+
+		woocommerce_product_loop_end();
+		wp_reset_postdata();
+		?>
 	</section>
 	<?php
 
@@ -401,8 +820,37 @@ function almasland_get_cart_item_features( $cart_item, $product ) {
 		return array();
 	}
 
-	$source_product = $product->is_type( 'variation' ) && $product->get_parent_id() ? wc_get_product( $product->get_parent_id() ) : $product;
-	$attributes     = array();
+	// Derived purely from product/variation attributes — no customer data.
+	$cache_key = 'cart_item_features:' . $product->get_id() . ':' . md5( (string) wp_json_encode( isset( $cart_item['variation'] ) ? $cart_item['variation'] : array() ) );
+
+	if ( almasland_cache_has( $cache_key ) ) {
+		return almasland_cache_get( $cache_key );
+	}
+
+	$source_product = function_exists( 'almasland_get_product_meta_owner' )
+		? almasland_get_product_meta_owner( $product )
+		: ( $product->is_type( 'variation' ) && $product->get_parent_id() ? wc_get_product( $product->get_parent_id() ) : $product );
+
+	/*
+	 * Only these four labels end up in the returned feature list, so attributes
+	 * that map to anything else are skipped before their values (and taxonomy
+	 * term queries) are resolved.
+	 */
+	$wanted = array_fill_keys(
+		array(
+			'گارانتی',
+			'پردازنده',
+			'رم',
+			'حافظه',
+			__( 'گارانتی', 'almas-land' ),
+			__( 'پردازنده', 'almas-land' ),
+			__( 'رم', 'almas-land' ),
+			__( 'حافظه', 'almas-land' ),
+		),
+		true
+	);
+
+	$by_label = array();
 
 	if ( ! empty( $cart_item['variation'] ) ) {
 		foreach ( $cart_item['variation'] as $name => $value ) {
@@ -411,27 +859,35 @@ function almasland_get_cart_item_features( $cart_item, $product ) {
 			}
 
 			$taxonomy = str_replace( 'attribute_', '', $name );
-			$label    = wc_attribute_label( $taxonomy, $source_product );
+			$label    = almasland_cart_attribute_label( wc_attribute_label( $taxonomy, $source_product ) );
+
+			if ( ! isset( $wanted[ $label ] ) ) {
+				continue;
+			}
 
 			if ( taxonomy_exists( $taxonomy ) ) {
-				$term = get_term_by( 'slug', $value, $taxonomy );
+				$term  = get_term_by( 'slug', $value, $taxonomy );
 				$value = $term && ! is_wp_error( $term ) ? $term->name : $value;
 			}
 
-			$attributes[] = array(
-				'label' => almasland_cart_attribute_label( $label ),
-				'value' => almasland_cart_attribute_value( $value ),
-			);
+			$value = almasland_cart_attribute_value( $value );
+
+			if ( ! empty( $value ) ) {
+				$by_label[ $label ][] = $value;
+			}
 		}
 	}
 
 	if ( $source_product instanceof WC_Product ) {
 		foreach ( $source_product->get_attributes() as $attribute ) {
-			$label  = wc_attribute_label( $attribute->get_name(), $source_product );
-			$values = array();
+			$label = almasland_cart_attribute_label( wc_attribute_label( $attribute->get_name(), $source_product ) );
+
+			if ( ! isset( $wanted[ $label ] ) ) {
+				continue;
+			}
 
 			if ( $attribute->is_taxonomy() ) {
-				$terms = wc_get_product_terms( $source_product->get_id(), $attribute->get_name(), array( 'fields' => 'names' ) );
+				$terms  = wc_get_product_terms( $source_product->get_id(), $attribute->get_name(), array( 'fields' => 'names' ) );
 				$values = is_wp_error( $terms ) ? array() : $terms;
 			} else {
 				$values = $attribute->get_options();
@@ -441,20 +897,12 @@ function almasland_get_cart_item_features( $cart_item, $product ) {
 				continue;
 			}
 
-			$attributes[] = array(
-				'label' => almasland_cart_attribute_label( $label ),
-				'value' => almasland_cart_attribute_value( implode( '، ', array_slice( $values, 0, 2 ) ) ),
-			);
-		}
-	}
+			$value = almasland_cart_attribute_value( implode( '، ', array_slice( $values, 0, 2 ) ) );
 
-	$by_label = array();
-	foreach ( $attributes as $attribute ) {
-		if ( empty( $attribute['label'] ) || empty( $attribute['value'] ) ) {
-			continue;
+			if ( ! empty( $value ) ) {
+				$by_label[ $label ][] = $value;
+			}
 		}
-
-		$by_label[ $attribute['label'] ][] = $attribute['value'];
 	}
 
 	$features = array();
@@ -485,7 +933,7 @@ function almasland_get_cart_item_features( $cart_item, $product ) {
 		);
 	}
 
-	return array_slice( $features, 0, 4 );
+	return almasland_cache_set( $cache_key, array_slice( $features, 0, 4 ) );
 }
 
 /**
@@ -669,6 +1117,31 @@ function almasland_order_status_label_class( $status ) {
 }
 
 /**
+ * Count a customer's orders without loading every order ID.
+ *
+ * `wc_get_orders()` with `limit => -1` materializes the customer's entire order
+ * history just to call `count()` on it. Asking for one paginated row instead
+ * returns the same total from the query's own row count.
+ *
+ * @param int      $user_id  User ID.
+ * @param string[] $statuses Order statuses to include.
+ * @return int
+ */
+function almasland_count_customer_orders( $user_id, array $statuses ) {
+	$results = wc_get_orders(
+		array(
+			'customer' => $user_id,
+			'limit'    => 1,
+			'paginate' => true,
+			'return'   => 'ids',
+			'status'   => $statuses,
+		)
+	);
+
+	return isset( $results->total ) ? (int) $results->total : 0;
+}
+
+/**
  * Get customer order counts for dashboard stats.
  *
  * @param int $user_id User ID.
@@ -686,27 +1159,8 @@ function almasland_get_account_order_stats( $user_id = 0 ) {
 		return $stats;
 	}
 
-	$stats['total'] = count(
-		wc_get_orders(
-			array(
-				'customer' => $user_id,
-				'limit'    => -1,
-				'return'   => 'ids',
-				'status'   => array_keys( wc_get_order_statuses() ),
-			)
-		)
-	);
-
-	$stats['active'] = count(
-		wc_get_orders(
-			array(
-				'customer' => $user_id,
-				'limit'    => -1,
-				'return'   => 'ids',
-				'status'   => array( 'wc-pending', 'wc-processing', 'wc-on-hold' ),
-			)
-		)
-	);
+	$stats['total']  = almasland_count_customer_orders( $user_id, array_keys( wc_get_order_statuses() ) );
+	$stats['active'] = almasland_count_customer_orders( $user_id, array( 'wc-pending', 'wc-processing', 'wc-on-hold' ) );
 
 	$customer = new WC_Customer( $user_id );
 	if ( $customer->get_billing_address_1() ) {

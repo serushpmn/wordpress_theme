@@ -11,18 +11,30 @@ if ( ! class_exists( 'WooCommerce' ) ) {
 
 $categories = function_exists( 'almasland_get_home_catalog_categories' ) ? almasland_get_home_catalog_categories( 10 ) : array();
 $limit      = 8;
-$all_products = almasland_get_home_catalog_products( 0, $limit );
 
-if ( empty( $all_products ) && empty( $categories ) ) {
-	return;
-}
-
-$panels = array(
-	'all' => $all_products,
+/*
+ * Resolve every tab's product IDs first (cached lists, no query when warm), then
+ * prime posts/meta/terms once so the panels below hydrate from the object cache
+ * instead of running one product query per tab.
+ */
+$panel_ids = array(
+	'all' => almasland_get_home_catalog_product_ids( 0, $limit ),
 );
 
 foreach ( $categories as $category ) {
-	$panels[ (string) $category->term_id ] = almasland_get_home_catalog_products( $category->term_id, $limit );
+	$panel_ids[ (string) $category->term_id ] = almasland_get_home_catalog_product_ids( $category->term_id, $limit );
+}
+
+if ( empty( $panel_ids['all'] ) && empty( $categories ) ) {
+	return;
+}
+
+almasland_prime_product_caches( array_merge( ...array_values( $panel_ids ) ) );
+
+$panels = array();
+
+foreach ( $panel_ids as $panel_key => $ids ) {
+	$panels[ $panel_key ] = almasland_get_products_by_ids( $ids );
 }
 
 $view_all_url = wc_get_page_permalink( 'shop' );

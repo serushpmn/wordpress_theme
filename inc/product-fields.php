@@ -195,14 +195,9 @@ function almasland_sanitize_product_colors( $value ) {
  * @return WC_Product
  */
 function almasland_get_product_meta_source( $product ) {
-	if ( $product->is_type( 'variation' ) ) {
-		$parent = wc_get_product( $product->get_parent_id() );
-		if ( $parent ) {
-			return $parent;
-		}
-	}
+	$owner = almasland_get_product_meta_owner( $product );
 
-	return $product;
+	return $owner instanceof WC_Product ? $owner : $product;
 }
 
 /**
@@ -637,13 +632,8 @@ function almasland_get_product_card_title( $product ) {
 		return '';
 	}
 
-	$source = $product;
-	if ( $product->is_type( 'variation' ) ) {
-		$parent = wc_get_product( $product->get_parent_id() );
-		if ( $parent ) {
-			$source = $parent;
-		}
-	}
+	$source = almasland_get_product_meta_owner( $product );
+	$source = $source instanceof WC_Product ? $source : $product;
 
 	$card_title = trim( (string) $source->get_meta( '_almas_card_title' ) );
 	if ( $card_title !== '' ) {

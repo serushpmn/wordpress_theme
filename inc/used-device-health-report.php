@@ -368,7 +368,12 @@ function almasland_health_report_value_tone( $value, $slot = '' ) {
 }
 
 /**
- * Build structured health report data from APSB payload.
+ * Structured health report data from the APSB payload.
+ *
+ * A single product page resolves this three times (the availability check, the
+ * gallery panel and the report itself), so it is memoized per product for the
+ * request. `almasland_cache_remember()` stores `null` as a hit, which keeps
+ * products without a report from re-querying the plugin on every call.
  *
  * @param WC_Product $product Product.
  * @return array<string, mixed>|null
@@ -379,7 +384,23 @@ function almasland_get_used_device_health_report_data( $product ) {
 	}
 
 	$product_id = $product->is_type( 'variation' ) ? $product->get_parent_id() : $product->get_id();
-	$payload    = apsb_get_product_specs( $product_id );
+
+	return almasland_cache_remember(
+		'used_health_report:' . $product_id,
+		static function () use ( $product_id ) {
+			return almasland_build_used_device_health_report_data( $product_id );
+		}
+	);
+}
+
+/**
+ * Build structured health report data from the APSB payload.
+ *
+ * @param int $product_id Product (or variation parent) ID.
+ * @return array<string, mixed>|null
+ */
+function almasland_build_used_device_health_report_data( $product_id ) {
+	$payload = apsb_get_product_specs( $product_id );
 
 	if ( empty( $payload['fields'] ) || ! is_array( $payload['fields'] ) ) {
 		return null;

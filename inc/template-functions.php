@@ -312,25 +312,39 @@ function almasland_get_page_by_title( $title, $post_type = 'page' ) {
  * @return string
  */
 function almasland_get_contact_url() {
-	$page_id = absint( almasland_get_option( 'contact_page_id', 0 ) );
-	if ( $page_id ) {
-		$url = get_permalink( $page_id );
-		if ( $url ) {
-			return $url;
+	return almasland_cache_remember(
+		'contact_url',
+		static function () {
+			$page_id = absint( almasland_get_option( 'contact_page_id', 0 ) );
+
+			if ( ! $page_id ) {
+				// Slug/title lookups are two uncached queries, so persist the resolved ID.
+				$page_id = (int) almasland_cache_remember_persistent(
+					'contact_page_id',
+					static function () {
+						$page = get_page_by_path( 'contact' );
+						if ( $page ) {
+							return (int) $page->ID;
+						}
+
+						$contact_page = almasland_get_page_by_title( 'تماس' );
+
+						return $contact_page ? (int) $contact_page->ID : 0;
+					},
+					DAY_IN_SECONDS
+				);
+			}
+
+			if ( $page_id > 0 ) {
+				$url = get_permalink( $page_id );
+				if ( $url ) {
+					return $url;
+				}
+			}
+
+			return home_url( '/' );
 		}
-	}
-
-	$page = get_page_by_path( 'contact' );
-	if ( $page ) {
-		return get_permalink( $page );
-	}
-
-	$contact_page = almasland_get_page_by_title( 'تماس' );
-	if ( $contact_page ) {
-		return get_permalink( $contact_page );
-	}
-
-	return home_url( '/' );
+	);
 }
 
 /**
@@ -397,29 +411,39 @@ function almasland_header_cart() {
  * @return string
  */
 function almasland_persian_digits( $value ) {
+	static $digits = array(
+		'0' => '۰',
+		'1' => '۱',
+		'2' => '۲',
+		'3' => '۳',
+		'4' => '۴',
+		'5' => '۵',
+		'6' => '۶',
+		'7' => '۷',
+		'8' => '۸',
+		'9' => '۹',
+	);
+
 	$value = (string) $value;
+
+	if ( '' === $value || false === strpbrk( $value, '0123456789' ) ) {
+		return $value;
+	}
+
+	// Without an ampersand there is no HTML entity to protect, so a plain byte
+	// map is equivalent to the regex path and far cheaper.
+	if ( false === strpos( $value, '&' ) ) {
+		return strtr( $value, $digits );
+	}
 
 	return preg_replace_callback(
 		'/&(?:#[0-9]+|#x[0-9a-fA-F]+|[a-zA-Z][a-zA-Z0-9]+);|[0-9]/',
-		static function ( $matches ) {
+		static function ( $matches ) use ( $digits ) {
 			$token = $matches[0];
 
 			if ( '&' === $token[0] ) {
 				return $token;
 			}
-
-			$digits = array(
-			'0' => '۰',
-			'1' => '۱',
-			'2' => '۲',
-			'3' => '۳',
-			'4' => '۴',
-			'5' => '۵',
-			'6' => '۶',
-			'7' => '۷',
-			'8' => '۸',
-			'9' => '۹',
-			);
 
 			return $digits[ $token ];
 		},
@@ -441,6 +465,11 @@ function almasland_persian_price( $html ) {
 	$html = (string) $html;
 
 	$decoded = html_entity_decode( $html, ENT_QUOTES | ENT_HTML5, 'UTF-8' );
+
+	// Nothing to transliterate; skip the tag-aware regex entirely.
+	if ( false === strpbrk( $decoded, '0123456789' ) ) {
+		return $decoded;
+	}
 
 	if ( false === strpos( $decoded, '<' ) ) {
 		return almasland_persian_digits( $decoded );
@@ -1000,6 +1029,23 @@ function almasland_get_home_why_section() {
  * @return array{url: string, width: int, height: int, srcset: string}
  */
 function almasland_get_product_category_image( $term_id ) {
+	$term_id = (int) $term_id;
+
+	return almasland_cache_remember(
+		'product_category_image:' . $term_id,
+		static function () use ( $term_id ) {
+			return almasland_build_product_category_image( $term_id );
+		}
+	);
+}
+
+/**
+ * Resolve category image data (uncached).
+ *
+ * @param int $term_id Category term ID.
+ * @return array{url: string, width: int, height: int, srcset: string}
+ */
+function almasland_build_product_category_image( $term_id ) {
 	$thumb_id = (int) get_term_meta( $term_id, 'thumbnail_id', true );
 
 	if ( ! $thumb_id ) {
@@ -1467,9 +1513,53 @@ function almasland_is_used_product( $product ) {
 		return false;
 	}
 
-	$product_id = $product->is_type( 'variation' ) ? $product->get_parent_id() : $product->get_id();
+	$product_id = (int) ( $product->is_type( 'variation' ) ? $product->get_parent_id() : $product->get_id() );
 
-	return $product_id > 0 && has_term( 'used', 'product_cat', $product_id );
+	if ( $product_id <= 0 ) {
+		return false;
+	}
+
+	// Called several times per card (badge, class, summary), so memoize per product.
+	return (bool) almasland_cache_remember(
+		'is_used_product:' . $product_id,
+		static function () use ( $product_id ) {
+			return has_term( 'used', 'product_cat', $product_id );
+		}
+	);
+}
+
+/**
+ * Resolve the product that owns theme meta (the parent for variations).
+ *
+ * @param WC_Product|null $product Product.
+ * @return WC_Product|null
+ */
+function almasland_get_product_meta_owner( $product ) {
+	if ( ! $product instanceof WC_Product ) {
+		return null;
+	}
+
+	if ( ! $product->is_type( 'variation' ) ) {
+		return $product;
+	}
+
+	$parent_id = (int) $product->get_parent_id();
+
+	if ( $parent_id <= 0 ) {
+		return $product;
+	}
+
+	$key = 'product_meta_owner:' . $parent_id;
+
+	if ( almasland_cache_has( $key ) ) {
+		$parent = almasland_cache_get( $key );
+	} else {
+		$parent = wc_get_product( $parent_id );
+		$parent = $parent instanceof WC_Product ? $parent : null;
+		almasland_cache_set( $key, $parent );
+	}
+
+	return $parent instanceof WC_Product ? $parent : $product;
 }
 
 /**
@@ -1506,13 +1596,7 @@ function almasland_get_product_card_summary( $product ) {
 		return '';
 	}
 
-	$source = $product;
-	if ( $product->is_type( 'variation' ) ) {
-		$parent = wc_get_product( $product->get_parent_id() );
-		if ( $parent ) {
-			$source = $parent;
-		}
-	}
+	$source = almasland_get_product_meta_owner( $product );
 
 	return trim( (string) $source->get_meta( '_almas_card_specs' ) );
 }
@@ -1528,13 +1612,7 @@ function almasland_get_product_grade_badge( $product ) {
 		return null;
 	}
 
-	$source = $product;
-	if ( $product->is_type( 'variation' ) ) {
-		$parent = wc_get_product( $product->get_parent_id() );
-		if ( $parent ) {
-			$source = $parent;
-		}
-	}
+	$source = almasland_get_product_meta_owner( $product );
 
 	$key         = sanitize_key( (string) $source->get_meta( '_almas_card_grade' ) );
 	$definitions = function_exists( 'almasland_get_product_card_grade_definitions' )
@@ -1577,49 +1655,91 @@ function almasland_get_product_grade_tone( $text ) {
  * @return array<int, WC_Product>
  */
 function almasland_get_home_special_offers_products( $limit = 12 ) {
+	return almasland_get_products_by_ids( almasland_get_home_special_offer_ids( $limit ) );
+}
+
+/**
+ * Cached IDs of on-sale, visible products for the front page slider.
+ *
+ * @param int $limit Maximum products.
+ * @return int[]
+ */
+function almasland_get_home_special_offer_ids( $limit = 12 ) {
 	if ( ! class_exists( 'WooCommerce' ) ) {
 		return array();
 	}
 
 	$limit = max( 1, (int) $limit );
 
-	// wc_get_products() has no `on_sale` arg — use sale IDs (parents only; skip variations).
-	$sale_ids = array_values(
-		array_filter(
-			array_map( 'absint', wc_get_product_ids_on_sale() ),
-			static function ( $id ) {
-				return $id > 0 && 'product' === get_post_type( $id );
-			}
-		)
-	);
+	return (array) almasland_cache_remember_persistent(
+		'home_special_offer_ids:' . $limit,
+		static function () use ( $limit ) {
+			$sale_ids = array_values( array_filter( array_map( 'absint', wc_get_product_ids_on_sale() ) ) );
 
-	if ( empty( $sale_ids ) ) {
+			if ( empty( $sale_ids ) ) {
+				return array();
+			}
+
+			/*
+			 * wc_get_products() has no `on_sale` arg, so filter by sale IDs. The
+			 * query is already restricted to post_type=product, which drops the
+			 * variation IDs in the sale list without a get_post_type() per ID.
+			 */
+			$products = wc_get_products(
+				array(
+					'limit'   => $limit,
+					'status'  => 'publish',
+					'include' => $sale_ids,
+					'orderby' => 'date',
+					'order'   => 'DESC',
+					'return'  => 'objects',
+				)
+			);
+
+			$ids = array();
+
+			foreach ( $products as $product ) {
+				if ( $product instanceof WC_Product && $product->is_visible() && $product->is_on_sale() ) {
+					$ids[] = (int) $product->get_id();
+				}
+			}
+
+			return $ids;
+		},
+		HOUR_IN_SECONDS
+	);
+}
+
+/**
+ * Hydrate product objects from IDs with a single cache prime.
+ *
+ * @param int[] $ids Product IDs.
+ * @return array<int, WC_Product>
+ */
+function almasland_get_products_by_ids( $ids ) {
+	if ( ! function_exists( 'wc_get_product' ) ) {
 		return array();
 	}
 
-	$products = wc_get_products(
-		array(
-			'limit'   => $limit,
-			'status'  => 'publish',
-			'include' => $sale_ids,
-			'orderby' => 'date',
-			'order'   => 'DESC',
-			'return'  => 'objects',
-		)
-	);
+	$ids = array_values( array_unique( array_filter( array_map( 'absint', (array) $ids ) ) ) );
 
-	if ( empty( $products ) ) {
+	if ( empty( $ids ) ) {
 		return array();
 	}
 
-	return array_values(
-		array_filter(
-			$products,
-			static function ( $product ) {
-				return $product instanceof WC_Product && $product->is_visible() && $product->is_on_sale();
-			}
-		)
-	);
+	almasland_prime_product_caches( $ids );
+
+	$products = array();
+
+	foreach ( $ids as $id ) {
+		$product = wc_get_product( $id );
+
+		if ( $product instanceof WC_Product ) {
+			$products[] = $product;
+		}
+	}
+
+	return $products;
 }
 
 /**
@@ -1630,19 +1750,85 @@ function almasland_get_home_special_offers_products( $limit = 12 ) {
  * @return array<int, WP_Term>
  */
 function almasland_get_home_catalog_categories( $limit = 10 ) {
+	$limit = max( 1, (int) $limit );
+
+	return array_slice( almasland_get_home_catalog_category_terms(), 0, $limit );
+}
+
+/**
+ * Maximum catalog tabs kept in the cached ordering.
+ */
+const ALMASLAND_HOME_CATALOG_CATEGORY_POOL = 20;
+
+/**
+ * Ordered catalog tab terms, resolved once per request.
+ *
+ * Header, footer and the front page all ask for this list with different
+ * limits, so the full pool is built once and sliced by each caller.
+ *
+ * @return array<int, WP_Term>
+ */
+function almasland_get_home_catalog_category_terms() {
 	if ( ! taxonomy_exists( 'product_cat' ) ) {
 		return array();
 	}
 
-	$limit   = max( 1, (int) $limit );
-	$exclude = array_filter( array( (int) get_option( 'default_product_cat', 0 ) ) );
+	return (array) almasland_cache_remember(
+		'home_catalog_category_terms',
+		static function () {
+			$totals = almasland_cache_remember_persistent(
+				'home_catalog_category_totals',
+				'almasland_build_home_catalog_category_totals'
+			);
 
+			if ( empty( $totals ) || ! is_array( $totals ) ) {
+				return array();
+			}
+
+			$terms = get_terms(
+				array(
+					'taxonomy'   => 'product_cat',
+					'include'    => array_keys( $totals ),
+					'orderby'    => 'include',
+					'hide_empty' => false,
+				)
+			);
+
+			if ( is_wp_error( $terms ) || empty( $terms ) ) {
+				return array();
+			}
+
+			$ordered = array();
+
+			foreach ( $terms as $term ) {
+				if ( ! isset( $totals[ $term->term_id ] ) ) {
+					continue;
+				}
+
+				// Clone so the recursive count never leaks into the shared term cache.
+				$item        = clone $term;
+				$item->count = (int) $totals[ $term->term_id ];
+				$ordered[]   = $item;
+			}
+
+			return $ordered;
+		}
+	);
+}
+
+/**
+ * Build the term-ID => recursive-product-count map for catalog tabs.
+ *
+ * The whole taxonomy is read in one query and the tree is walked in PHP,
+ * replacing a get_term_children() + get_term() pair per top-level category.
+ *
+ * @return array<int, int> Ordered map of term ID to total product count.
+ */
+function almasland_build_home_catalog_category_totals() {
 	$terms = get_terms(
 		array(
 			'taxonomy'   => 'product_cat',
-			'parent'     => 0,
 			'hide_empty' => false,
-			'exclude'    => $exclude,
 		)
 	);
 
@@ -1650,43 +1836,85 @@ function almasland_get_home_catalog_categories( $limit = 10 ) {
 		return array();
 	}
 
+	$exclude  = array_filter( array( (int) get_option( 'default_product_cat', 0 ) ) );
+	$counts   = array();
+	$children = array();
+	$roots    = array();
+
 	foreach ( $terms as $term ) {
-		$total    = (int) $term->count;
-		$children = get_term_children( (int) $term->term_id, 'product_cat' );
+		$term_id            = (int) $term->term_id;
+		$parent_id          = (int) $term->parent;
+		$counts[ $term_id ] = (int) $term->count;
 
-		if ( ! is_wp_error( $children ) && $children ) {
-			foreach ( $children as $child_id ) {
-				$child = get_term( (int) $child_id, 'product_cat' );
-				if ( $child && ! is_wp_error( $child ) ) {
-					$total += (int) $child->count;
-				}
-			}
+		$children[ $parent_id ][] = $term_id;
+
+		if ( 0 === $parent_id && ! in_array( $term_id, $exclude, true ) ) {
+			$roots[ $term_id ] = (string) $term->name;
 		}
-
-		$term->count = $total;
 	}
 
-	$terms = array_values(
-		array_filter(
-			$terms,
-			static function ( $term ) {
-				return (int) $term->count > 0;
-			}
-		)
-	);
+	$rows = array();
+
+	foreach ( $roots as $term_id => $name ) {
+		$total = almasland_sum_term_tree_count( $term_id, $counts, $children );
+
+		if ( $total > 0 ) {
+			$rows[] = array(
+				'id'    => $term_id,
+				'name'  => $name,
+				'count' => $total,
+			);
+		}
+	}
 
 	usort(
-		$terms,
+		$rows,
 		static function ( $a, $b ) {
-			$count_cmp = (int) $b->count <=> (int) $a->count;
+			$count_cmp = $b['count'] <=> $a['count'];
+
 			if ( 0 !== $count_cmp ) {
 				return $count_cmp;
 			}
-			return strcasecmp( (string) $a->name, (string) $b->name );
+
+			return strcasecmp( $a['name'], $b['name'] );
 		}
 	);
 
-	return array_slice( $terms, 0, $limit );
+	$totals = array();
+
+	foreach ( array_slice( $rows, 0, ALMASLAND_HOME_CATALOG_CATEGORY_POOL ) as $row ) {
+		$totals[ $row['id'] ] = $row['count'];
+	}
+
+	return $totals;
+}
+
+/**
+ * Sum a term's product count including every descendant.
+ *
+ * @param int              $term_id  Term ID.
+ * @param array<int, int>  $counts   Term ID => own count.
+ * @param array<int, int[]> $children Parent ID => child IDs.
+ * @param array<int, bool> $seen     Cycle guard.
+ * @return int
+ */
+function almasland_sum_term_tree_count( $term_id, array $counts, array $children, array &$seen = array() ) {
+	if ( isset( $seen[ $term_id ] ) ) {
+		return 0;
+	}
+
+	$seen[ $term_id ] = true;
+	$total            = isset( $counts[ $term_id ] ) ? (int) $counts[ $term_id ] : 0;
+
+	if ( empty( $children[ $term_id ] ) ) {
+		return $total;
+	}
+
+	foreach ( $children[ $term_id ] as $child_id ) {
+		$total += almasland_sum_term_tree_count( $child_id, $counts, $children, $seen );
+	}
+
+	return $total;
 }
 
 /**
@@ -1697,40 +1925,55 @@ function almasland_get_home_catalog_categories( $limit = 10 ) {
  * @return array<int, WC_Product>
  */
 function almasland_get_home_catalog_products( $category_id = 0, $limit = 8 ) {
+	return almasland_get_products_by_ids( almasland_get_home_catalog_product_ids( $category_id, $limit ) );
+}
+
+/**
+ * Cached, visibility-filtered product IDs for one catalog tab.
+ *
+ * @param int $category_id Product category ID (0 = all).
+ * @param int $limit       Maximum products.
+ * @return int[]
+ */
+function almasland_get_home_catalog_product_ids( $category_id = 0, $limit = 8 ) {
 	if ( ! class_exists( 'WooCommerce' ) ) {
 		return array();
 	}
 
-	$args = array(
-		'limit'   => max( 1, (int) $limit ),
-		'status'  => 'publish',
-		'orderby' => 'date',
-		'order'   => 'DESC',
-		'return'  => 'objects',
-	);
-
 	$category_id = absint( $category_id );
-	if ( $category_id ) {
-		$term = get_term( $category_id, 'product_cat' );
-		if ( ! $term || is_wp_error( $term ) ) {
-			return array();
-		}
-		$args['category'] = array( $term->slug );
-	}
+	$limit       = max( 1, (int) $limit );
 
-	$products = wc_get_products( $args );
+	return (array) almasland_cache_remember_persistent(
+		'home_catalog_ids:' . $category_id . ':' . $limit,
+		static function () use ( $category_id, $limit ) {
+			$args = array(
+				'limit'   => $limit,
+				'status'  => 'publish',
+				'orderby' => 'date',
+				'order'   => 'DESC',
+				'return'  => 'objects',
+			);
 
-	if ( empty( $products ) ) {
-		return array();
-	}
+			if ( $category_id ) {
+				$term = get_term( $category_id, 'product_cat' );
 
-	return array_values(
-		array_filter(
-			$products,
-			static function ( $product ) {
-				return $product instanceof WC_Product && $product->is_visible();
+				if ( ! $term || is_wp_error( $term ) ) {
+					return array();
+				}
+
+				$args['category'] = array( $term->slug );
 			}
-		)
+
+			$ids = array();
+
+			foreach ( wc_get_products( $args ) as $product ) {
+				if ( $product instanceof WC_Product && $product->is_visible() ) {
+					$ids[] = (int) $product->get_id();
+				}
+			}
+
+			return $ids;
+		}
 	);
 }
 
@@ -1891,6 +2134,16 @@ function almasland_render_home_product_loop( $args = array() ) {
 	if ( empty( $products ) ) {
 		return false;
 	}
+
+	$loop_product_ids = array();
+
+	foreach ( $products as $loop_product ) {
+		if ( $loop_product instanceof WC_Product ) {
+			$loop_product_ids[] = $loop_product->get_id();
+		}
+	}
+
+	almasland_prime_product_caches( $loop_product_ids );
 
 	$columns         = min( 4, count( $products ) );
 	$loop_classes    = array( 'products', 'columns-' . $columns );
@@ -2248,8 +2501,6 @@ function almasland_render_footer_trust_section() {
 					class="footer-trust-badges__link footer-trust-badges__link--enamad"
 					href="<?php echo esc_url( almasland_get_footer_enamad_url() ); ?>"
 					target="_blank"
-					rel="noopener noreferrer"
-					referrerpolicy="origin"
 					title="<?php esc_attr_e( 'نماد اعتماد الکترونیکی', 'almas-land' ); ?>"
 				>
 					<img
@@ -2259,7 +2510,6 @@ function almasland_render_footer_trust_section() {
 						height="86"
 						loading="lazy"
 						decoding="async"
-						referrerpolicy="origin"
 					>
 				</a>
 
