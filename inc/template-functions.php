@@ -1795,7 +1795,7 @@ function almasland_get_home_special_offers_products( $limit = 12 ) {
 }
 
 /**
- * Cached IDs of on-sale, visible products for the front page slider.
+ * Cached IDs of on-sale, in-stock, visible products for the front page slider.
  *
  * @param int $limit Maximum products.
  * @return int[]
@@ -1808,7 +1808,7 @@ function almasland_get_home_special_offer_ids( $limit = 12 ) {
 	$limit = max( 1, (int) $limit );
 
 	return (array) almasland_cache_remember_persistent(
-		'home_special_offer_ids:' . $limit,
+		'home_special_offer_ids_instock:' . $limit,
 		static function () use ( $limit ) {
 			$sale_ids = array_values( array_filter( array_map( 'absint', wc_get_product_ids_on_sale() ) ) );
 
@@ -1820,22 +1820,30 @@ function almasland_get_home_special_offer_ids( $limit = 12 ) {
 			 * wc_get_products() has no `on_sale` arg, so filter by sale IDs. The
 			 * query is already restricted to post_type=product, which drops the
 			 * variation IDs in the sale list without a get_post_type() per ID.
+			 * stock_status limits to in-stock parents; is_in_stock() is a final
+			 * guard for edge cases WooCommerce still surfaces.
 			 */
 			$products = wc_get_products(
 				array(
-					'limit'   => $limit,
-					'status'  => 'publish',
-					'include' => $sale_ids,
-					'orderby' => 'date',
-					'order'   => 'DESC',
-					'return'  => 'objects',
+					'limit'        => $limit,
+					'status'       => 'publish',
+					'include'      => $sale_ids,
+					'stock_status' => 'instock',
+					'orderby'      => 'date',
+					'order'        => 'DESC',
+					'return'       => 'objects',
 				)
 			);
 
 			$ids = array();
 
 			foreach ( $products as $product ) {
-				if ( $product instanceof WC_Product && $product->is_visible() && $product->is_on_sale() ) {
+				if (
+					$product instanceof WC_Product
+					&& $product->is_visible()
+					&& $product->is_on_sale()
+					&& $product->is_in_stock()
+				) {
 					$ids[] = (int) $product->get_id();
 				}
 			}
