@@ -791,6 +791,142 @@ function almasland_get_home_hero_slider_settings() {
 }
 
 /**
+ * Whether the image-based hero slider has at least one usable slide.
+ *
+ * @return bool
+ */
+function almasland_has_home_hero_images() {
+	return ! empty( almasland_get_home_hero_slides() );
+}
+
+/**
+ * Default gradient hero shown when no hero images are uploaded.
+ *
+ * Pulls title / text / CTA from the theme panel and builds live catalog stats.
+ *
+ * @return array<string, mixed>|null
+ */
+function almasland_get_default_hero() {
+	$homepage = almasland_get_panel_settings()['homepage'];
+
+	if ( empty( $homepage['hero_enabled'] ) || almasland_has_home_hero_images() ) {
+		return null;
+	}
+
+	$title = trim( (string) ( $homepage['hero_title'] ?? '' ) );
+	$text  = trim( (string) ( $homepage['hero_text'] ?? '' ) );
+	$cta   = trim( (string) ( $homepage['hero_button_text'] ?? '' ) );
+	$url   = trim( (string) ( $homepage['hero_button_url'] ?? '' ) );
+
+	if ( '' === $title ) {
+		$title = __( 'فروشگاه تخصصی محصولات دیجیتال', 'almas-land' );
+	}
+	if ( '' === $text ) {
+		$text = __( 'خرید مطمئن لپ‌تاپ، موبایل، مانیتور و لوازم جانبی با پشتیبانی تخصصی.', 'almas-land' );
+	}
+	if ( '' === $cta ) {
+		$cta = __( 'مشاهده محصولات', 'almas-land' );
+	}
+	if ( '' === $url ) {
+		$url = almasland_get_default_shop_url();
+	}
+
+	return array(
+		'brand'    => get_bloginfo( 'name' ),
+		'title'    => $title,
+		'text'     => $text,
+		'cta_text' => $cta,
+		'cta_url'  => $url,
+		'stats'    => almasland_get_default_hero_stats(),
+	);
+}
+
+/**
+ * Live stats for the default hero (cached briefly).
+ *
+ * @return array<int, array{value:string,label:string}>
+ */
+function almasland_get_default_hero_stats() {
+	$counts = (array) almasland_cache_remember_persistent(
+		'default_hero_stats',
+		static function () {
+			$products = 0;
+			$categories = 0;
+			$on_sale = 0;
+
+			if ( class_exists( 'WooCommerce' ) ) {
+				$products = (int) wp_count_posts( 'product' )->publish;
+
+				$cat_terms = get_terms(
+					array(
+						'taxonomy'   => 'product_cat',
+						'hide_empty' => true,
+						'parent'     => 0,
+						'fields'     => 'ids',
+					)
+				);
+				if ( ! is_wp_error( $cat_terms ) ) {
+					$default = (int) get_option( 'default_product_cat', 0 );
+					$categories = count( array_diff( array_map( 'absint', $cat_terms ), array( $default ) ) );
+				}
+
+				$on_sale = count( array_filter( array_map( 'absint', (array) wc_get_product_ids_on_sale() ) ) );
+			}
+
+			return array(
+				'products'   => max( 0, $products ),
+				'categories' => max( 0, $categories ),
+				'on_sale'    => max( 0, $on_sale ),
+			);
+		},
+		HOUR_IN_SECONDS
+	);
+
+	$stats = array();
+
+	if ( ! empty( $counts['products'] ) ) {
+		$stats[] = array(
+			'value' => almasland_persian_digits( number_format_i18n( (int) $counts['products'] ) ) . '+',
+			'label' => __( 'محصول فعال', 'almas-land' ),
+		);
+	}
+
+	if ( ! empty( $counts['categories'] ) ) {
+		$stats[] = array(
+			'value' => almasland_persian_digits( (string) (int) $counts['categories'] ),
+			'label' => __( 'دسته‌بندی', 'almas-land' ),
+		);
+	}
+
+	if ( ! empty( $counts['on_sale'] ) ) {
+		$stats[] = array(
+			'value' => almasland_persian_digits( (string) (int) $counts['on_sale'] ),
+			'label' => __( 'پیشنهاد ویژه', 'almas-land' ),
+		);
+	}
+
+	// Fallbacks when the catalog is still empty / WooCommerce inactive.
+	if ( empty( $stats ) ) {
+		$stats = array(
+			array(
+				'value' => almasland_persian_digits( '۷' ),
+				'label' => __( 'روز مهلت تست', 'almas-land' ),
+			),
+			array(
+				'value' => almasland_persian_digits( '۲۴' ),
+				'label' => __( 'ساعت ارسال', 'almas-land' ),
+			),
+			array(
+				'value' => __( 'اصالت', 'almas-land' ),
+				'label' => __( 'ضمانت کالا', 'almas-land' ),
+			),
+		);
+	}
+
+	return $stats;
+}
+
+/**
  * Enabled slider items from panel (legacy).
  *
  * @return array<int, array<string, mixed>>
