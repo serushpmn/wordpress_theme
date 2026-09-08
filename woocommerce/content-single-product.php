@@ -282,16 +282,40 @@ $contact_phone    = almasland_get_phone_tel();
 			<?php endif; ?>
 		<?php endif; ?>
 
-		<a class="buy-card__digipay" href="<?php echo esc_url( almasland_get_contact_url() ); ?>">
-			<span class="buy-card__digipay-icon" aria-hidden="true">
-				<svg viewBox="0 0 24 24" fill="none"><rect x="2.5" y="5" width="19" height="14" rx="2.5" stroke="currentColor" stroke-width="1.7"/><path d="M2.5 9.5h19" stroke="currentColor" stroke-width="1.7"/><path d="M7 15h4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+		<a class="buy-card__digipay"<?php echo function_exists( 'almasland_product_has_credit_price' ) && almasland_product_has_credit_price( $product ) ? '' : ' hidden'; ?>>
+			<span class="buy-card__digipay-logo">
+				<img
+					class="buy-card__digipay-logo-img buy-card__digipay-logo-img--light"
+					src="<?php echo esc_url( ALMASLAND_URI . '/assets/images/digipay-logo.png' ); ?>"
+					alt="<?php esc_attr_e( 'دیجی‌پی', 'almas-land' ); ?>"
+					width="56"
+					height="72"
+					loading="lazy"
+					decoding="async"
+				>
+				<img
+					class="buy-card__digipay-logo-img buy-card__digipay-logo-img--dark"
+					src="<?php echo esc_url( ALMASLAND_URI . '/assets/images/digipay-logo-dark.png' ); ?>"
+					alt=""
+					width="56"
+					height="72"
+					loading="lazy"
+					decoding="async"
+					aria-hidden="true"
+				>
 			</span>
 			<span class="buy-card__digipay-text">
-				<strong><?php esc_html_e( 'خرید اعتباری با دیجی‌پی', 'almas-land' ); ?></strong>
-				<span><?php echo esc_html( $installment_text ? $installment_text : __( 'خرید اقساطی آسان در چند کلیک', 'almas-land' ) ); ?></span>
-			</span>
-			<span class="buy-card__digipay-chevron" aria-hidden="true">
-				<svg viewBox="0 0 24 24" fill="none"><path d="M14.5 6.5 9 12l5.5 5.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+				<strong><?php esc_html_e( 'قیمت خرید اعتباری', 'almas-land' ); ?></strong>
+				<?php if ( function_exists( 'almasland_product_has_credit_price' ) && almasland_product_has_credit_price( $product ) ) : ?>
+					<span
+						class="buy-card__digipay-price"
+						data-digipay-price
+						data-digipay-default="<?php echo esc_attr( almasland_get_credit_price_html( $product ) ); ?>"
+					>
+						<?php echo almasland_get_credit_price_html( $product ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+					</span>
+				<?php endif; ?>
+				<span class="buy-card__digipay-hint"><?php echo esc_html( $installment_text ? $installment_text : __( 'هنگام ثبت سفارش درگاه دیجی پی را انتخاب نمایید', 'almas-land' ) ); ?></span>
 			</span>
 		</a>
 

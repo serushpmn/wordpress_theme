@@ -217,6 +217,28 @@ function setVariationImage(variation) {
   }
 }
 
+function setDigipayPrice(html) {
+  const price = document.querySelector("[data-digipay-price]");
+  const block = document.querySelector(".buy-card__digipay");
+  if (!price) {
+    return;
+  }
+
+  if (html) {
+    price.innerHTML = html;
+    if (block) {
+      block.hidden = false;
+    }
+    return;
+  }
+
+  const fallback = price.dataset.digipayDefault || "";
+  price.innerHTML = fallback;
+  if (block) {
+    block.hidden = !fallback;
+  }
+}
+
 function setChooseHintVisible(isVisible) {
   const hint = document.querySelector(".buy-card__choose-hint");
   if (hint) {
@@ -243,6 +265,7 @@ function initVariableProductUI() {
 
   $form.on("found_variation", (_event, variation) => {
     setPriceBlocks(variation?.almas_price_html || variation?.price_html || "", true);
+    setDigipayPrice(variation?.almas_credit_price_html || "");
     setProductStockLabel(variation?.availability_html || "");
     setVariationImage(variation);
     setChooseHintVisible(false);
@@ -250,6 +273,7 @@ function initVariableProductUI() {
 
   $form.on("reset_data hide_variation", () => {
     setPriceBlocks("", false);
+    setDigipayPrice("");
     setProductStockLabel("");
     setVariationImage(null);
     setChooseHintVisible(true);

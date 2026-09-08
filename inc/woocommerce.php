@@ -1242,6 +1242,117 @@ function almasland_get_buy_price_contact_html() {
 }
 
 /**
+ * Credit (Digipay) markup rate as a percent of the final purchasable price.
+ *
+ * @return float
+ */
+function almasland_get_credit_price_percent() {
+	return (float) apply_filters( 'almasland_credit_price_percent', 7.53 );
+}
+
+/**
+ * Final display price used for buy-card and credit pricing.
+ *
+ * Uses the payable amount (sale price when discounted), including tax rules
+ * via `wc_get_price_to_display()` / variation min display price.
+ *
+ * @param WC_Product|null $product Product or variation.
+ * @return float
+ */
+function almasland_get_product_final_display_price( $product ) {
+	if ( ! $product instanceof WC_Product || ! $product->is_in_stock() ) {
+		return 0.0;
+	}
+
+	if ( $product->is_type( 'variable' ) ) {
+		$min = $product->get_variation_price( 'min', true );
+
+		return is_numeric( $min ) ? (float) $min : 0.0;
+	}
+
+	$raw_price = $product->get_price();
+
+	if ( '' === $raw_price || null === $raw_price ) {
+		return 0.0;
+	}
+
+	return (float) wc_get_price_to_display( $product );
+}
+
+/**
+ * Round a final price up with the Digipay / credit surcharge.
+ *
+ * @param float $final_price Final payable product price.
+ * @return float
+ */
+function almasland_calculate_credit_price( $final_price ) {
+	$final_price = (float) $final_price;
+
+	if ( $final_price <= 0 ) {
+		return 0.0;
+	}
+
+	$rate = almasland_get_credit_price_percent() / 100;
+
+	return (float) round( $final_price * ( 1 + $rate ) );
+}
+
+/**
+ * Credit price amount for a product or variation.
+ *
+ * @param WC_Product|null $product Product.
+ * @return float
+ */
+function almasland_get_credit_price( $product ) {
+	return almasland_calculate_credit_price( almasland_get_product_final_display_price( $product ) );
+}
+
+/**
+ * Whether the Digipay block should show a numeric credit price.
+ *
+ * @param WC_Product|null $product Product.
+ * @return bool
+ */
+function almasland_product_has_credit_price( $product ) {
+	return almasland_get_credit_price( $product ) > 0;
+}
+
+/**
+ * Formatted HTML for the Digipay credit price.
+ *
+ * @param WC_Product|null $product Product or variation.
+ * @return string
+ */
+function almasland_get_credit_price_html( $product ) {
+	$amount = almasland_get_credit_price( $product );
+
+	if ( $amount <= 0 ) {
+		return '';
+	}
+
+	$from_label = '';
+
+	if ( $product instanceof WC_Product && $product->is_type( 'variable' ) ) {
+		$min = (float) $product->get_variation_price( 'min', true );
+		$max = (float) $product->get_variation_price( 'max', true );
+
+		if ( abs( $min - $max ) > 0.0001 ) {
+			$from_label = __( 'از', 'almas-land' );
+		}
+	}
+
+	$html = '';
+
+	if ( $from_label ) {
+		$html .= '<span class="buy-card__digipay-from">' . esc_html( $from_label ) . '</span> ';
+	}
+
+	$html .= wp_kses_post( wc_price( $amount ) );
+
+	return $html;
+}
+
+/**
  * Buy-card price markup: current price on top, discount badge + strikethrough below.
  *
  * @param WC_Product $product Product or variation.
@@ -1332,9 +1443,11 @@ function almasland_get_buy_price_html( $product ) {
  */
 function almasland_available_variation_price_html( $data, $product, $variation ) {
 	unset( $product );
-	$data['almas_price_html'] = almasland_get_buy_price_html( $variation );
+	$data['almas_price_html']        = almasland_get_buy_price_html( $variation );
+	$data['almas_credit_price_html'] = almasland_get_credit_price_html( $variation );
 	if ( $variation && ! $variation->is_in_stock() ) {
-		$data['price_html'] = '';
+		$data['price_html']              = '';
+		$data['almas_credit_price_html'] = '';
 	}
 	return $data;
 }
